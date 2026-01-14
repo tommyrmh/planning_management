@@ -119,11 +119,19 @@
 <script>
 // Check if user is admin
 const token = localStorage.getItem('token');
-const user = token ? JSON.parse(localStorage.getItem('user')) : null;
 
-if (!token || !user || user.role !== 'ADMIN') {
-    alert('Seuls les administrateurs peuvent créer des utilisateurs.');
+if (!token) {
+    alert('Vous devez être connecté en tant qu\'administrateur.');
     window.location.replace('/login');
+} else {
+    const user = JSON.parse(localStorage.getItem('user'));
+    console.log('User data:', user); // Debug
+    console.log('User role:', user ? user.role : 'no user');
+
+    if (!user || user.role !== 'ADMIN') {
+        alert('Seuls les administrateurs peuvent créer des utilisateurs.');
+        window.location.replace('/dashboard');
+    }
 }
 
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
