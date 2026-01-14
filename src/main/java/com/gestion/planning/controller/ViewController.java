@@ -66,6 +66,11 @@ public class ViewController {
         return "tasks/list";
     }
 
+    @GetMapping("/tasks/board")
+    public String tasksBoard() {
+        return "tasks/board";
+    }
+
     @GetMapping("/tasks/new")
     public String newTask() {
         return "tasks/create";

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Tableau Kanban des Tâches - Planning Management</title>
+    <style>
+        .kanban-board {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+        }
+
+        .kanban-column {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .kanban-column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .kanban-column-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .kanban-column-count {
+            background: #6c757d;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+
+        .kanban-card {
+            background: white;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .kanban-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+
+        .kanban-card-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .kanban-card-project {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+
+        .kanban-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .kanban-card-assignee {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .assignee-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #611f69;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        /* Column colors */
+        .column-todo .kanban-column-header {
+            border-color: #6c757d;
+        }
+        .column-todo .kanban-column-count {
+            background: #6c757d;
+        }
+
+        .column-in-progress .kanban-column-header {
+            border-color: #0d6efd;
+        }
+        .column-in-progress .kanban-column-count {
+            background: #0d6efd;
+        }
+
+        .column-done .kanban-column-header {
+            border-color: #198754;
+        }
+        .column-done .kanban-column-count {
+            background: #198754;
+        }
+
+        .column-blocked .kanban-column-header {
+            border-color: #dc3545;
+        }
+        .column-blocked .kanban-column-count {
+            background: #dc3545;
+        }
+
+        .empty-column {
+            text-align: center;
+            padding: 2rem;
+            color: #adb5bd;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-columns-gap"></i> Tableau Kanban des Tâches</h1>
+        <div>
+            <a href="/tasks" class="btn btn-slack-secondary">
+                <i class="bi bi-list"></i> Vue Liste
+            </a>
+            <button class="btn btn-slack-primary" id="createTaskBtn" style="display: none;" onclick="window.location.href='/tasks/new'">
+                <i class="bi bi-plus-circle"></i> Créer une Tâche
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card-slack mb-4">
+        <h3 class="card-slack-title"><i class="bi bi-funnel"></i> Filtres</h3>
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Projet</label>
+                <select class="form-select" id="filterProject">
+                    <option value="">Tous les projets</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Assigné à</label>
+                <select class="form-select" id="filterAssignee">
+                    <option value="">Tous les collaborateurs</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">&nbsp;</label>
+                <button type="button" class="btn btn-slack-primary w-100" onclick="loadTasks()">
+                    <i class="bi bi-search"></i> Rechercher
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-board">
+        <!-- À faire Column -->
+        <div class="kanban-column column-todo">
+            <div class="kanban-column-header">
+                <span class="kanban-column-title">
+                    <i class="bi bi-circle"></i> À faire
+                </span>
+                <span class="kanban-column-count" id="count-todo">0</span>
+            </div>
+            <div id="column-todo">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-secondary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- En cours Column -->
+        <div class="kanban-column column-in-progress">
+            <div class="kanban-column-header">
+                <span class="kanban-column-title">
+                    <i class="bi bi-arrow-repeat"></i> En cours
+                </span>
+                <span class="kanban-column-count" id="count-in-progress">0</span>
+            </div>
+            <div id="column-in-progress">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminé Column -->
+        <div class="kanban-column column-done">
+            <div class="kanban-column-header">
+                <span class="kanban-column-title">
+                    <i class="bi bi-check-circle"></i> Terminé
+                </span>
+                <span class="kanban-column-count" id="count-done">0</span>
+            </div>
+            <div id="column-done">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloqué Column -->
+        <div class="kanban-column column-blocked">
+            <div class="kanban-column-header">
+                <span class="kanban-column-title">
+                    <i class="bi bi-x-circle"></i> Bloqué
+                </span>
+                <span class="kanban-column-count" id="count-blocked">0</span>
+            </div>
+            <div id="column-blocked">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-danger" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.replace('/login');
+        return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && (user.role === 'MANAGER' || user.role === 'ADMIN')) {
+        document.getElementById('createTaskBtn').style.display = 'inline-block';
+    }
+
+    loadProjects();
+    loadUsers();
+    loadTasks();
+});
+
+function loadProjects() {
+    const token = localStorage.getItem('token');
+    fetch('/api/projects?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('filterProject');
+        data.content.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.nom;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function loadUsers() {
+    const token = localStorage.getItem('token');
+    fetch('/api/users?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('filterAssignee');
+        data.content.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.firstName} ${user.lastName}`;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function loadTasks() {
+    const token = localStorage.getItem('token');
+    const projectId = document.getElementById('filterProject').value;
+    const assigneeId = document.getElementById('filterAssignee').value;
+
+    let url = '/api/tasks?size=1000&sortBy=priorite&sortDir=DESC';
+    if (projectId) url += `&projectId=${projectId}`;
+    if (assigneeId) url += `&assignedToId=${assigneeId}`;
+
+    fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        displayTasksInColumns(data.content);
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        ['todo', 'in-progress', 'done', 'blocked'].forEach(status => {
+            document.getElementById(`column-${status}`).innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Erreur de chargement
+                </div>
+            `;
+        });
+    });
+}
+
+function displayTasksInColumns(tasks) {
+    // Group tasks by status
+    const tasksByStatus = {
+        'TODO': [],
+        'IN_PROGRESS': [],
+        'DONE': [],
+        'BLOCKED': []
+    };
+
+    tasks.forEach(task => {
+        if (tasksByStatus[task.statut]) {
+            tasksByStatus[task.statut].push(task);
+        }
+    });
+
+    // Display each column
+    displayColumn('todo', tasksByStatus.TODO);
+    displayColumn('in-progress', tasksByStatus.IN_PROGRESS);
+    displayColumn('done', tasksByStatus.DONE);
+    displayColumn('blocked', tasksByStatus.BLOCKED);
+}
+
+function displayColumn(columnId, tasks) {
+    const column = document.getElementById(`column-${columnId}`);
+    const statusMap = {
+        'todo': 'TODO',
+        'in-progress': 'IN_PROGRESS',
+        'done': 'DONE',
+        'blocked': 'BLOCKED'
+    };
+    const status = statusMap[columnId];
+
+    // Update count
+    document.getElementById(`count-${columnId}`).textContent = tasks.length;
+
+    if (tasks.length === 0) {
+        column.innerHTML = '<div class="empty-column">Aucune tâche</div>';
+        return;
+    }
+
+    let html = '';
+    tasks.forEach(task => {
+        const priorityBadge = getPriorityBadge(task.priorite);
+        const assigneeInitials = task.assignedToName ?
+            task.assignedToName.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
+        const assigneeName = task.assignedToName || 'Non assigné';
+
+        html += `
+            <div class="kanban-card" onclick="window.location.href='/tasks/${task.id}'">
+                <div class="kanban-card-title">${task.titre}</div>
+                <div class="kanban-card-project">
+                    <i class="bi bi-folder"></i> ${task.projectNom}
+                </div>
+                <div>${priorityBadge}</div>
+                <div class="kanban-card-footer">
+                    <div class="kanban-card-assignee">
+                        <div class="assignee-avatar">${assigneeInitials}</div>
+                        <span>${assigneeName}</span>
+                    </div>
+                    <small class="text-muted">${formatDate(task.dateFin)}</small>
+                </div>
+            </div>
+        `;
+    });
+
+    column.innerHTML = html;
+}
+
+function getPriorityBadge(priority) {
+    const badges = {
+        'LOW': '<span class="badge bg-secondary">Basse</span>',
+        'MEDIUM': '<span class="badge bg-info">Moyenne</span>',
+        'HIGH': '<span class="badge bg-warning">Haute</span>',
+        'URGENT': '<span class="badge bg-danger">Urgente</span>'
+    };
+    return badges[priority] || priority;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+</script>
+
+</body>
+</html>
