@@ -41,6 +41,11 @@ public class ViewController {
         return "projects/list";
     }
 
+    @GetMapping("/projects/board")
+    public String projectsBoard() {
+        return "projects/board";
+    }
+
     @GetMapping("/projects/new")
     public String newProject() {
         return "projects/create";

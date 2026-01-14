@@ -16,9 +16,17 @@
             <h2 class="text-white mb-0">
                 <i class="fas fa-folder-open me-2"></i>Gestion des Projets
             </h2>
-            <button id="createProjectBtn" class="btn btn-primary" style="display: none;">
-                <i class="fas fa-plus me-2"></i>Nouveau Projet
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary">
+                    <i class="fas fa-list me-2"></i>Vue Liste
+                </button>
+                <a href="/projects/board" class="btn btn-secondary">
+                    <i class="fas fa-columns me-2"></i>Vue Kanban
+                </a>
+                <button id="createProjectBtn" class="btn btn-success" style="display: none;">
+                    <i class="fas fa-plus me-2"></i>Nouveau Projet
+                </button>
+            </div>
         </div>
 
         <!-- Filtres -->
