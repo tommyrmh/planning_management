@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Inscription - Planning Management</title>
+</head>
+<body>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <h1><i class="bi bi-calendar-check"></i></h1>
+            <h2>Planning Management</h2>
+            <p>Créez votre compte</p>
+        </div>
+
+        <!-- Error Alert -->
+        <div id="errorAlert" class="alert alert-error alert-slack d-none" role="alert">
+            <i class="bi bi-exclamation-circle"></i>
+            <span id="errorMessage"></span>
+        </div>
+
+        <form id="registerForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="firstName" class="form-label">
+                        <i class="bi bi-person"></i> Prénom
+                    </label>
+                    <input type="text" class="form-control" id="firstName" name="firstName" required
+                           placeholder="Votre prénom">
+                    <div class="invalid-feedback">Veuillez entrer votre prénom</div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="lastName" class="form-label">
+                        <i class="bi bi-person"></i> Nom
+                    </label>
+                    <input type="text" class="form-control" id="lastName" name="lastName" required
+                           placeholder="Votre nom">
+                    <div class="invalid-feedback">Veuillez entrer votre nom</div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="username" class="form-label">
+                    <i class="bi bi-at"></i> Nom d'utilisateur
+                </label>
+                <input type="text" class="form-control" id="username" name="username" required
+                       minlength="3" placeholder="Choisissez un nom d'utilisateur">
+                <div class="invalid-feedback">Le nom d'utilisateur doit contenir au moins 3 caractères</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">
+                    <i class="bi bi-envelope"></i> Email
+                </label>
+                <input type="email" class="form-control" id="email" name="email" required
+                       placeholder="votre.email@exemple.com">
+                <div class="invalid-feedback">Veuillez entrer une adresse email valide</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="department" class="form-label">
+                    <i class="bi bi-building"></i> Département
+                </label>
+                <input type="text" class="form-control" id="department" name="department" required
+                       placeholder="Ex: Développement, RH, Marketing...">
+                <div class="invalid-feedback">Veuillez entrer votre département</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="role" class="form-label">
+                    <i class="bi bi-shield"></i> Rôle
+                </label>
+                <select class="form-select" id="role" name="role" required>
+                    <option value="">Sélectionnez un rôle</option>
+                    <option value="COLLABORATOR">Collaborateur</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="ADMIN">Administrateur</option>
+                </select>
+                <div class="invalid-feedback">Veuillez sélectionner un rôle</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">
+                    <i class="bi bi-lock"></i> Mot de passe
+                </label>
+                <input type="password" class="form-control" id="password" name="password" required
+                       minlength="6" placeholder="Minimum 6 caractères">
+                <div class="invalid-feedback">Le mot de passe doit contenir au moins 6 caractères</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="confirmPassword" class="form-label">
+                    <i class="bi bi-lock-fill"></i> Confirmer le mot de passe
+                </label>
+                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required
+                       minlength="6" placeholder="Confirmez votre mot de passe">
+                <div class="invalid-feedback">Les mots de passe ne correspondent pas</div>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-slack-primary">
+                    <i class="bi bi-person-plus"></i> Créer mon compte
+                </button>
+            </div>
+        </form>
+
+        <div class="auth-footer">
+            <p class="mb-0">
+                Vous avez déjà un compte ?
+                <a th:href="@{/login}">Se connecter</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (password !== confirmPassword) {
+        showError('Les mots de passe ne correspondent pas');
+        return;
+    }
+
+    const formData = {
+        username: document.getElementById('username').value,
+        email: document.getElementById('email').value,
+        password: password,
+        firstName: document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        department: document.getElementById('department').value,
+        role: document.getElementById('role').value
+    };
+
+    try {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data));
+            window.location.href = '/dashboard';
+        } else {
+            const error = await response.json();
+            if (error.validationErrors) {
+                const errorMessages = Object.values(error.validationErrors).join(', ');
+                showError(errorMessages);
+            } else {
+                showError(error.message || 'Une erreur est survenue lors de l\'inscription');
+            }
+        }
+    } catch (error) {
+        showError('Une erreur est survenue. Veuillez réessayer.');
+    }
+});
+
+function showError(message) {
+    const errorAlert = document.getElementById('errorAlert');
+    const errorMessage = document.getElementById('errorMessage');
+    errorMessage.textContent = message;
+    errorAlert.classList.remove('d-none');
+
+    setTimeout(() => errorAlert.classList.add('d-none'), 5000);
+}
+</script>
+
+</body>
+</html>

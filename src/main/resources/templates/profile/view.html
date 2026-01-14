@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Mon Profil - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-person-circle"></i> Mon Profil</h1>
+        <p>Consultez et modifiez vos informations personnelles</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card-slack">
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profileAvatar">
+                        JD
+                    </div>
+                    <div class="profile-info">
+                        <h2 id="profileFullName">John Doe</h2>
+                        <p id="profileUsername">@john.doe</p>
+                        <span id="profileRoleBadge" class="badge-slack badge-collaborator">Collaborateur</span>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="profile-detail">
+                    <div class="profile-detail-label">
+                        <i class="bi bi-envelope"></i> Email
+                    </div>
+                    <div class="profile-detail-value" id="profileEmail">
+                        john.doe@exemple.com
+                    </div>
+                </div>
+
+                <div class="profile-detail">
+                    <div class="profile-detail-label">
+                        <i class="bi bi-building"></i> Département
+                    </div>
+                    <div class="profile-detail-value" id="profileDepartment">
+                        Développement
+                    </div>
+                </div>
+
+                <div class="profile-detail">
+                    <div class="profile-detail-label">
+                        <i class="bi bi-shield"></i> Rôle
+                    </div>
+                    <div class="profile-detail-value" id="profileRole">
+                        Collaborateur
+                    </div>
+                </div>
+
+                <div class="profile-detail">
+                    <div class="profile-detail-label">
+                        <i class="bi bi-calendar"></i> Membre depuis
+                    </div>
+                    <div class="profile-detail-value">
+                        Janvier 2026
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <a th:href="@{/profile/edit}" class="btn btn-slack-primary">
+                        <i class="bi bi-pencil"></i> Modifier mon profil
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card-slack">
+                <h3 class="card-slack-title">
+                    <i class="bi bi-info-circle"></i> Informations
+                </h3>
+                <p class="text-slack-text-light">
+                    Vous pouvez modifier vos informations personnelles à tout moment en cliquant sur le bouton "Modifier mon profil".
+                </p>
+                <hr>
+                <p class="text-slack-text-light">
+                    <i class="bi bi-shield-check"></i> Vos données sont sécurisées et ne seront jamais partagées.
+                </p>
+            </div>
+
+            <div class="card-slack mt-3">
+                <h3 class="card-slack-title">
+                    <i class="bi bi-activity"></i> Statistiques
+                </h3>
+                <div class="profile-detail">
+                    <div class="profile-detail-label">Plannings</div>
+                    <div class="profile-detail-value">12</div>
+                </div>
+                <div class="profile-detail">
+                    <div class="profile-detail-label">Disponibilités</div>
+                    <div class="profile-detail-value">45</div>
+                </div>
+                <div class="profile-detail">
+                    <div class="profile-detail-label">Équipe</div>
+                    <div class="profile-detail-value">8 membres</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/profile', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const profile = await response.json();
+            displayProfile(profile);
+        } else {
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+});
+
+function displayProfile(profile) {
+    // Avatar initials
+    const initials = (profile.firstName.charAt(0) + profile.lastName.charAt(0)).toUpperCase();
+    document.getElementById('profileAvatar').textContent = initials;
+
+    // Full name
+    document.getElementById('profileFullName').textContent =
+        `${profile.firstName} ${profile.lastName}`;
+
+    // Username
+    document.getElementById('profileUsername').textContent = `@${profile.username}`;
+
+    // Email
+    document.getElementById('profileEmail').textContent = profile.email;
+
+    // Department
+    document.getElementById('profileDepartment').textContent = profile.department;
+
+    // Role
+    const roleNames = {
+        'COLLABORATOR': 'Collaborateur',
+        'MANAGER': 'Manager',
+        'ADMIN': 'Administrateur'
+    };
+    document.getElementById('profileRole').textContent = roleNames[profile.role] || profile.role;
+
+    // Role badge
+    const roleBadge = document.getElementById('profileRoleBadge');
+    roleBadge.textContent = roleNames[profile.role] || profile.role;
+    roleBadge.className = 'badge-slack';
+
+    if (profile.role === 'COLLABORATOR') {
+        roleBadge.classList.add('badge-collaborator');
+    } else if (profile.role === 'MANAGER') {
+        roleBadge.classList.add('badge-manager');
+    } else if (profile.role === 'ADMIN') {
+        roleBadge.classList.add('badge-admin');
+    }
+}
+</script>
+
+</body>
+</html>

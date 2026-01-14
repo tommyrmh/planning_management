@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Modifier Mon Profil - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-pencil-square"></i> Modifier Mon Profil</h1>
+        <p>Mettez à jour vos informations personnelles</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card-slack">
+                <!-- Success Alert -->
+                <div id="successAlert" class="alert alert-success alert-slack d-none" role="alert">
+                    <i class="bi bi-check-circle"></i>
+                    <span>Profil mis à jour avec succès !</span>
+                </div>
+
+                <!-- Error Alert -->
+                <div id="errorAlert" class="alert alert-error alert-slack d-none" role="alert">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <span id="errorMessage"></span>
+                </div>
+
+                <form id="updateProfileForm">
+                    <h3 class="card-slack-title mb-3">
+                        <i class="bi bi-person"></i> Informations Personnelles
+                    </h3>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="firstName" class="form-label">Prénom</label>
+                            <input type="text" class="form-control" id="firstName" name="firstName">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="lastName" class="form-label">Nom</label>
+                            <input type="text" class="form-control" id="lastName" name="lastName">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="bi bi-envelope"></i> Email
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="department" class="form-label">
+                            <i class="bi bi-building"></i> Département
+                        </label>
+                        <input type="text" class="form-control" id="department" name="department">
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h3 class="card-slack-title mb-3">
+                        <i class="bi bi-shield-lock"></i> Sécurité
+                    </h3>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="bi bi-lock"></i> Nouveau Mot de Passe
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               placeholder="Laissez vide pour ne pas changer" minlength="6">
+                        <small class="form-text text-muted">
+                            Minimum 6 caractères. Laissez vide si vous ne souhaitez pas changer votre mot de passe.
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">
+                            <i class="bi bi-lock-fill"></i> Confirmer le Mot de Passe
+                        </label>
+                        <input type="password" class="form-control" id="confirmPassword" name="confirmPassword"
+                               placeholder="Confirmez le nouveau mot de passe" minlength="6">
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-slack-success">
+                            <i class="bi bi-check-circle"></i> Enregistrer les modifications
+                        </button>
+                        <a th:href="@{/profile}" class="btn btn-slack-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card-slack">
+                <h3 class="card-slack-title">
+                    <i class="bi bi-info-circle"></i> Conseils
+                </h3>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check2 text-slack-green"></i>
+                        Utilisez une adresse email valide
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2 text-slack-green"></i>
+                        Choisissez un mot de passe fort
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2 text-slack-green"></i>
+                        Gardez vos informations à jour
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2 text-slack-green"></i>
+                        Seuls les champs modifiés seront mis à jour
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card-slack mt-3">
+                <h3 class="card-slack-title">
+                    <i class="bi bi-shield-check"></i> Sécurité
+                </h3>
+                <p class="text-muted">
+                    Votre mot de passe est stocké de manière sécurisée et cryptée. Personne, y compris les administrateurs, ne peut voir votre mot de passe.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    // Load current profile data
+    try {
+        const response = await fetch('/api/profile', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const profile = await response.json();
+            populateForm(profile);
+        } else {
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+});
+
+function populateForm(profile) {
+    document.getElementById('firstName').value = profile.firstName || '';
+    document.getElementById('lastName').value = profile.lastName || '';
+    document.getElementById('email').value = profile.email || '';
+    document.getElementById('department').value = profile.department || '';
+}
+
+document.getElementById('updateProfileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    // Validate password if provided
+    if (password && password !== confirmPassword) {
+        showError('Les mots de passe ne correspondent pas');
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    const updateData = {};
+
+    // Only include fields that have values
+    const email = document.getElementById('email').value;
+    const firstName = document.getElementById('firstName').value;
+    const lastName = document.getElementById('lastName').value;
+    const department = document.getElementById('department').value;
+
+    if (email) updateData.email = email;
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (department) updateData.department = department;
+    if (password) updateData.password = password;
+
+    try {
+        const response = await fetch('/api/profile', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+        });
+
+        if (response.ok) {
+            const updatedProfile = await response.json();
+            showSuccess();
+            // Update local storage
+            const user = JSON.parse(localStorage.getItem('user'));
+            Object.assign(user, updatedProfile);
+            localStorage.setItem('user', JSON.stringify(user));
+
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                window.location.href = '/profile';
+            }, 2000);
+        } else {
+            const error = await response.json();
+            if (error.validationErrors) {
+                const errorMessages = Object.values(error.validationErrors).join(', ');
+                showError(errorMessages);
+            } else {
+                showError(error.message || 'Une erreur est survenue lors de la mise à jour');
+            }
+        }
+    } catch (error) {
+        showError('Une erreur est survenue. Veuillez réessayer.');
+    }
+});
+
+function showSuccess() {
+    const successAlert = document.getElementById('successAlert');
+    successAlert.classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showError(message) {
+    const errorAlert = document.getElementById('errorAlert');
+    const errorMessage = document.getElementById('errorMessage');
+    errorMessage.textContent = message;
+    errorAlert.classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    setTimeout(() => errorAlert.classList.add('d-none'), 5000);
+}
+</script>
+
+</body>
+</html>

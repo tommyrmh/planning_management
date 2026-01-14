@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Dashboard - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-house-door"></i> Dashboard</h1>
+        <p>Bienvenue <span id="welcomeName" class="text-slack-primary fw-bold"></span> !</p>
+    </div>
+
+    <div class="row">
+        <!-- Statistics Cards -->
+        <div class="col-md-3 mb-4">
+            <div class="card-slack text-center">
+                <div class="mb-3">
+                    <i class="bi bi-calendar3 text-slack-primary" style="font-size: 3rem;"></i>
+                </div>
+                <h3 class="card-slack-title mb-2">12</h3>
+                <p class="text-muted mb-0">Plannings Actifs</p>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card-slack text-center">
+                <div class="mb-3">
+                    <i class="bi bi-clock text-slack-green" style="font-size: 3rem;"></i>
+                </div>
+                <h3 class="card-slack-title mb-2">45</h3>
+                <p class="text-muted mb-0">Disponibilités</p>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card-slack text-center">
+                <div class="mb-3">
+                    <i class="bi bi-people text-slack-blue" style="font-size: 3rem;"></i>
+                </div>
+                <h3 class="card-slack-title mb-2">8</h3>
+                <p class="text-muted mb-0">Membres d'Équipe</p>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card-slack text-center">
+                <div class="mb-3">
+                    <i class="bi bi-bell text-slack-yellow" style="font-size: 3rem;"></i>
+                </div>
+                <h3 class="card-slack-title mb-2">3</h3>
+                <p class="text-muted mb-0">Notifications</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Recent Activity -->
+            <div class="card-slack">
+                <h3 class="card-slack-title">
+                    <i class="bi bi-activity"></i> Activité Récente
+                </h3>
+
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-calendar-plus text-slack-green" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="mb-1">Nouveau planning créé</h5>
+                                <p class="mb-0 text-muted">Réunion d'équipe - Lundi 15 Janvier</p>
+                                <small class="text-muted">Il y a 2 heures</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-person-check text-slack-blue" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="mb-1">Disponibilité mise à jour</h5>
+                                <p class="mb-0 text-muted">Disponible du 20 au 25 Janvier</p>
+                                <small class="text-muted">Hier</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-chat-left-text text-slack-aubergine" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="mb-1">Nouveau commentaire</h5>
+                                <p class="mb-0 text-muted">Sophie a commenté votre planning</p>
+                                <small class="text-muted">Il y a 3 jours</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Events -->
+            <div class="card-slack mt-4">
+                <h3 class="card-slack-title">
+                    <i class="bi bi-calendar-event"></i> Prochains Événements
+                </h3>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="badge bg-primary me-2">15</div>
+                                <div>
+                                    <strong>Janvier</strong>
+                                </div>
+                            </div>
+                            <h5>Réunion d'équipe</h5>
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-clock"></i> 10:00 - 11:30
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="badge bg-success me-2">20</div>
+                                <div>
+                                    <strong>Janvier</strong>
+                                </div>
+                            </div>
+                            <h5>Formation Sprint Planning</h5>
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-clock"></i> 14:00 - 17:00
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card-slack">
+                <h3 class="card-slack-title">
+                    <i class="bi bi-lightning"></i> Actions Rapides
+                </h3>
+
+                <div class="d-grid gap-2">
+                    <a href="/planning/new" class="btn btn-slack-primary">
+                        <i class="bi bi-plus-circle"></i> Créer un Planning
+                    </a>
+                    <a href="/availability/new" class="btn btn-slack-success">
+                        <i class="bi bi-calendar-plus"></i> Déclarer Disponibilité
+                    </a>
+                    <a th:href="@{/profile}" class="btn btn-slack-secondary">
+                        <i class="bi bi-person"></i> Voir Mon Profil
+                    </a>
+                </div>
+            </div>
+
+            <!-- Team Status -->
+            <div class="card-slack mt-3">
+                <h3 class="card-slack-title">
+                    <i class="bi bi-people"></i> Statut de l'Équipe
+                </h3>
+
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="profile-avatar" style="width: 40px; height: 40px; font-size: 1rem; margin-right: 10px;">
+                            MA
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Marie Dupont</strong>
+                            <br>
+                            <span class="badge badge-slack badge-manager" style="font-size: 0.7rem;">Manager</span>
+                        </div>
+                        <div>
+                            <span class="badge bg-success">Disponible</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="profile-avatar" style="width: 40px; height: 40px; font-size: 1rem; margin-right: 10px;">
+                            PL
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Pierre Leroy</strong>
+                            <br>
+                            <span class="badge badge-slack badge-collaborator" style="font-size: 0.7rem;">Collaborateur</span>
+                        </div>
+                        <div>
+                            <span class="badge bg-warning">Occupé</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="profile-avatar" style="width: 40px; height: 40px; font-size: 1rem; margin-right: 10px;">
+                            SM
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Sophie Martin</strong>
+                            <br>
+                            <span class="badge badge-slack badge-collaborator" style="font-size: 0.7rem;">Collaborateur</span>
+                        </div>
+                        <div>
+                            <span class="badge bg-danger">Absent</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    // Load user info
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user) {
+        document.getElementById('welcomeName').textContent = user.firstName || user.username;
+    }
+});
+</script>
+
+</body>
+</html>
