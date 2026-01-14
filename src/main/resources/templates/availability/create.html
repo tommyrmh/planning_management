@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Déclarer Disponibilité - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-calendar-plus"></i> Déclarer une Disponibilité</h1>
+        <a href="/availability/calendar" class="btn btn-slack-secondary">
+            <i class="bi bi-arrow-left"></i> Retour au calendrier
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-slack">
+                <form id="createAvailabilityForm">
+                    <div class="mb-3" id="userSelectContainer">
+                        <label for="userId" class="form-label">Collaborateur <span class="text-danger">*</span></label>
+                        <select class="form-select" id="userId" required>
+                            <option value="">Sélectionner un collaborateur</option>
+                        </select>
+                        <small class="text-muted">Pour les managers uniquement</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="dateDebut" class="form-label">Date de début <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="dateDebut" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="dateFin" class="form-label">Date de fin <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="dateFin" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="disponible" class="form-label">Statut <span class="text-danger">*</span></label>
+                        <select class="form-select" id="disponible" required>
+                            <option value="">Sélectionner un statut</option>
+                            <option value="true">Disponible</option>
+                            <option value="false">Occupé</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="commentaire" class="form-label">Commentaire</label>
+                        <textarea class="form-control" id="commentaire" rows="3" placeholder="Ex: Congés, Formation, Mission externe..."></textarea>
+                    </div>
+
+                    <div id="errorAlert" class="alert alert-danger" style="display: none;"></div>
+                    <div id="successAlert" class="alert alert-success" style="display: none;"></div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-slack-primary">
+                            <i class="bi bi-check-circle"></i> Déclarer
+                        </button>
+                        <a href="/availability/calendar" class="btn btn-slack-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+let currentUser;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.replace('/login');
+        return;
+    }
+
+    currentUser = JSON.parse(localStorage.getItem('user'));
+
+    loadUsers();
+
+    document.getElementById('createAvailabilityForm').addEventListener('submit', handleSubmit);
+});
+
+function loadUsers() {
+    const token = localStorage.getItem('token');
+
+    fetch('/api/users?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('userId');
+
+        // Si l'utilisateur est MANAGER ou ADMIN, il peut déclarer pour tout le monde
+        if (currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN') {
+            data.content.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.firstName} ${user.lastName}`;
+                if (user.id === currentUser.id) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        } else {
+            // Sinon, il ne peut déclarer que pour lui-même
+            const option = document.createElement('option');
+            option.value = currentUser.id;
+            option.textContent = `${currentUser.firstName} ${currentUser.lastName}`;
+            option.selected = true;
+            select.appendChild(option);
+            select.disabled = true;
+            document.getElementById('userSelectContainer').style.display = 'none';
+        }
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function handleSubmit(e) {
+    e.preventDefault();
+
+    const token = localStorage.getItem('token');
+    const errorAlert = document.getElementById('errorAlert');
+    const successAlert = document.getElementById('successAlert');
+
+    errorAlert.style.display = 'none';
+    successAlert.style.display = 'none';
+
+    const availabilityData = {
+        userId: parseInt(document.getElementById('userId').value),
+        dateDebut: document.getElementById('dateDebut').value,
+        dateFin: document.getElementById('dateFin').value,
+        disponible: document.getElementById('disponible').value === 'true',
+        commentaire: document.getElementById('commentaire').value || null
+    };
+
+    fetch('/api/availabilities', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(availabilityData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Erreur lors de la création');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        successAlert.textContent = 'Disponibilité déclarée avec succès !';
+        successAlert.style.display = 'block';
+
+        setTimeout(() => {
+            window.location.href = '/availability/calendar';
+        }, 1500);
+    })
+    .catch(error => {
+        errorAlert.textContent = error.message;
+        errorAlert.style.display = 'block';
+    });
+}
+</script>
+
+</body>
+</html>

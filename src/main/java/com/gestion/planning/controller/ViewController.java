@@ -85,4 +85,19 @@ public class ViewController {
     public String editTask() {
         return "tasks/edit";
     }
+
+    @GetMapping("/availability")
+    public String availability() {
+        return "availability/list";
+    }
+
+    @GetMapping("/availability/calendar")
+    public String availabilityCalendar() {
+        return "availability/calendar";
+    }
+
+    @GetMapping("/availability/new")
+    public String newAvailability() {
+        return "availability/create";
+    }
 }

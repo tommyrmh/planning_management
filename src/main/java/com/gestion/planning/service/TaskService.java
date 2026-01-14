@@ -23,6 +23,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final AvailabilityService availabilityService;
 
     public TaskResponse createTask(CreateTaskRequest request, User currentUser) {
         Project project = projectRepository.findById(request.getProjectId())
@@ -129,6 +130,15 @@ public class TaskService {
         User assignee = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
+        // Vérifier la disponibilité
+        boolean isAvailable = availabilityService.isUserAvailable(
+                userId, task.getDateDebut(), task.getDateFin());
+
+        if (!isAvailable) {
+            throw new IllegalArgumentException(
+                    "L'utilisateur n'est pas disponible pour cette période");
+        }
+
         task.setAssignedTo(assignee);
         task = taskRepository.save(task);
         return mapToResponse(task);
@@ -149,6 +159,15 @@ public class TaskService {
 
         User newAssignee = userRepository.findById(newUserId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        // Vérifier la disponibilité
+        boolean isAvailable = availabilityService.isUserAvailable(
+                newUserId, task.getDateDebut(), task.getDateFin());
+
+        if (!isAvailable) {
+            throw new IllegalArgumentException(
+                    "L'utilisateur n'est pas disponible pour cette période");
+        }
 
         task.setAssignedTo(newAssignee);
         task = taskRepository.save(task);
