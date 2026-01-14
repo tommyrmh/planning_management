@@ -731,6 +731,7 @@ Le thème utilise une palette de couleurs inspirée de Slack :
 
 ## Auteur
 Tommy RAMIHOATRARIVO
+Tommy RAMIHOATRARIVO
 
 Projet développé dans le cadre d'un test technique de recrutement.
 
