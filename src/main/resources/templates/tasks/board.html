@@ -1,431 +1,553 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau Kanban des Tâches - Planning Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/slack-theme.css}" rel="stylesheet">
     <style>
         .kanban-board {
             display: flex;
-            gap: 1rem;
+            gap: 20px;
             overflow-x: auto;
-            padding-bottom: 1rem;
+            padding: 20px 0;
+            min-height: calc(100vh - 200px);
         }
 
         .kanban-column {
-            flex: 1;
-            min-width: 300px;
+            flex: 0 0 300px;
             background: #f8f9fa;
             border-radius: 8px;
-            padding: 1rem;
+            padding: 15px;
+            max-height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
         }
 
         .kanban-column-header {
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #dee2e6;
         }
 
-        .kanban-column-title {
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
+        .column-todo { background: #6c757d; }
+        .column-in-progress { background: #0d6efd; }
+        .column-done { background: #198754; }
+        .column-blocked { background: #dc3545; }
 
-        .kanban-column-count {
-            background: #6c757d;
-            color: white;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.85rem;
+        .kanban-cards {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
         }
 
         .kanban-card {
             background: white;
-            border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
         }
 
         .kanban-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
             transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
         }
 
         .kanban-card-title {
             font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #2c3e50;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #1d1c1d;
         }
 
         .kanban-card-project {
-            font-size: 0.85rem;
-            color: #6c757d;
-            margin-bottom: 0.5rem;
+            font-size: 12px;
+            color: #616061;
+            margin-bottom: 8px;
         }
+
+        .kanban-card-dates {
+            font-size: 11px;
+            color: #868686;
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .kanban-card-priority {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-bottom: 8px;
+        }
+
+        .priority-LOW { background: #e9ecef; color: #495057; }
+        .priority-MEDIUM { background: #cfe2ff; color: #084298; }
+        .priority-HIGH { background: #fff3cd; color: #664d03; }
+        .priority-URGENT { background: #f8d7da; color: #842029; }
 
         .kanban-card-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 0.75rem;
-            padding-top: 0.75rem;
-            border-top: 1px solid #e9ecef;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f1f1f1;
         }
 
         .kanban-card-assignee {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 0.85rem;
+            gap: 5px;
+            font-size: 11px;
+            color: #868686;
         }
 
         .assignee-avatar {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: #611f69;
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7rem;
+            font-size: 9px;
             font-weight: bold;
         }
 
-        /* Column colors */
-        .column-todo .kanban-column-header {
-            border-color: #6c757d;
-        }
-        .column-todo .kanban-column-count {
-            background: #6c757d;
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
-        .column-in-progress .kanban-column-header {
-            border-color: #0d6efd;
-        }
-        .column-in-progress .kanban-column-count {
-            background: #0d6efd;
+        .kanban-column.drag-over {
+            background: #e9ecef;
         }
 
-        .column-done .kanban-column-header {
-            border-color: #198754;
-        }
-        .column-done .kanban-column-count {
-            background: #198754;
-        }
-
-        .column-blocked .kanban-column-header {
-            border-color: #dc3545;
-        }
-        .column-blocked .kanban-column-count {
-            background: #dc3545;
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
         }
 
         .empty-column {
             text-align: center;
-            padding: 2rem;
-            color: #adb5bd;
-            font-style: italic;
+            padding: 20px;
+            color: #868686;
+            font-size: 13px;
+        }
+
+        .filters-section {
+            background: #1a1d20;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
+    <div th:replace="~{fragments/layout :: navbar}"></div>
 
-<div th:replace="~{fragments/layout :: navbar}"></div>
-
-<div class="main-container">
-    <div class="page-header">
-        <h1><i class="bi bi-columns-gap"></i> Tableau Kanban des Tâches</h1>
-        <div>
-            <a href="/tasks" class="btn btn-slack-secondary">
-                <i class="bi bi-list"></i> Vue Liste
-            </a>
-            <button class="btn btn-slack-primary" id="createTaskBtn" style="display: none;" onclick="window.location.href='/tasks/new'">
-                <i class="bi bi-plus-circle"></i> Créer une Tâche
-            </button>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="card-slack mb-4">
-        <h3 class="card-slack-title"><i class="bi bi-funnel"></i> Filtres</h3>
-        <form id="filterForm" class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">Projet</label>
-                <select class="form-select" id="filterProject">
-                    <option value="">Tous les projets</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Assigné à</label>
-                <select class="form-select" id="filterAssignee">
-                    <option value="">Tous les collaborateurs</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">&nbsp;</label>
-                <button type="button" class="btn btn-slack-primary w-100" onclick="loadTasks()">
-                    <i class="bi bi-search"></i> Rechercher
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-white mb-0">
+                <i class="fas fa-columns me-2"></i>Tableau Kanban des Tâches
+            </h2>
+            <div class="d-flex gap-2">
+                <div class="view-toggle">
+                    <a href="/tasks" class="btn btn-secondary">
+                        <i class="fas fa-list me-2"></i>Vue Liste
+                    </a>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-columns me-2"></i>Vue Kanban
+                    </button>
+                </div>
+                <button id="createTaskBtn" class="btn btn-success" style="display: none;">
+                    <i class="fas fa-plus me-2"></i>Nouvelle Tâche
                 </button>
             </div>
-        </form>
-    </div>
+        </div>
 
-    <!-- Kanban Board -->
-    <div class="kanban-board">
-        <!-- À faire Column -->
-        <div class="kanban-column column-todo">
-            <div class="kanban-column-header">
-                <span class="kanban-column-title">
-                    <i class="bi bi-circle"></i> À faire
-                </span>
-                <span class="kanban-column-count" id="count-todo">0</span>
-            </div>
-            <div id="column-todo">
-                <div class="text-center py-4">
-                    <div class="spinner-border text-secondary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
+        <!-- Filters -->
+        <div class="filters-section">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label text-white">Projet</label>
+                    <select class="form-select form-select-sm" id="filterProject">
+                        <option value="">Tous les projets</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-white">Assigné à</label>
+                    <select class="form-select form-select-sm" id="filterAssignee">
+                        <option value="">Tous les collaborateurs</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="button" class="btn btn-primary btn-sm w-100" onclick="loadTasks()">
+                        <i class="fas fa-search me-2"></i>Rechercher
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- En cours Column -->
-        <div class="kanban-column column-in-progress">
-            <div class="kanban-column-header">
-                <span class="kanban-column-title">
-                    <i class="bi bi-arrow-repeat"></i> En cours
-                </span>
-                <span class="kanban-column-count" id="count-in-progress">0</span>
-            </div>
-            <div id="column-in-progress">
-                <div class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
-                </div>
+        <div id="loadingSpinner" class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
             </div>
         </div>
 
-        <!-- Terminé Column -->
-        <div class="kanban-column column-done">
-            <div class="kanban-column-header">
-                <span class="kanban-column-title">
-                    <i class="bi bi-check-circle"></i> Terminé
-                </span>
-                <span class="kanban-column-count" id="count-done">0</span>
-            </div>
-            <div id="column-done">
-                <div class="text-center py-4">
-                    <div class="spinner-border text-success" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
+        <div id="kanbanBoard" class="kanban-board" style="display: none;">
+            <!-- TODO -->
+            <div class="kanban-column" data-status="TODO">
+                <div class="kanban-column-header column-todo">
+                    <span>À Faire</span>
+                    <span class="badge bg-white text-dark" id="count-TODO">0</span>
                 </div>
+                <div class="kanban-cards" id="cards-TODO"></div>
             </div>
-        </div>
 
-        <!-- Bloqué Column -->
-        <div class="kanban-column column-blocked">
-            <div class="kanban-column-header">
-                <span class="kanban-column-title">
-                    <i class="bi bi-x-circle"></i> Bloqué
-                </span>
-                <span class="kanban-column-count" id="count-blocked">0</span>
-            </div>
-            <div id="column-blocked">
-                <div class="text-center py-4">
-                    <div class="spinner-border text-danger" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
+            <!-- IN_PROGRESS -->
+            <div class="kanban-column" data-status="IN_PROGRESS">
+                <div class="kanban-column-header column-in-progress">
+                    <span>En Cours</span>
+                    <span class="badge bg-white text-dark" id="count-IN_PROGRESS">0</span>
                 </div>
+                <div class="kanban-cards" id="cards-IN_PROGRESS"></div>
+            </div>
+
+            <!-- DONE -->
+            <div class="kanban-column" data-status="DONE">
+                <div class="kanban-column-header column-done">
+                    <span>Terminé</span>
+                    <span class="badge bg-white text-dark" id="count-DONE">0</span>
+                </div>
+                <div class="kanban-cards" id="cards-DONE"></div>
+            </div>
+
+            <!-- BLOCKED -->
+            <div class="kanban-column" data-status="BLOCKED">
+                <div class="kanban-column-header column-blocked">
+                    <span>Bloqué</span>
+                    <span class="badge bg-white text-dark" id="count-BLOCKED">0</span>
+                </div>
+                <div class="kanban-cards" id="cards-BLOCKED"></div>
             </div>
         </div>
     </div>
-</div>
 
-<div th:replace="~{fragments/layout :: footer}"></div>
-<div th:replace="~{fragments/layout :: scripts}"></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/app.js}"></script>
+    <script>
+        let currentUser = null;
+        let allTasks = [];
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.replace('/login');
-        return;
-    }
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Vérifier l'authentification
+            currentUser = await checkAuth();
+            if (!currentUser) return;
 
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user && (user.role === 'MANAGER' || user.role === 'ADMIN')) {
-        document.getElementById('createTaskBtn').style.display = 'inline-block';
-    }
+            // Afficher bouton créer si Manager/Admin
+            if (currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN') {
+                document.getElementById('createTaskBtn').style.display = 'block';
+                document.getElementById('createTaskBtn').addEventListener('click', function() {
+                    window.location.href = '/tasks/new';
+                });
+            }
 
-    loadProjects();
-    loadUsers();
-    loadTasks();
-});
+            // Charger les filtres
+            await loadProjects();
+            await loadUsers();
 
-function loadProjects() {
-    const token = localStorage.getItem('token');
-    fetch('/api/projects?size=100', {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        const select = document.getElementById('filterProject');
-        data.content.forEach(project => {
-            const option = document.createElement('option');
-            option.value = project.id;
-            option.textContent = project.nom;
-            select.appendChild(option);
+            // Charger les tâches
+            await loadTasks();
         });
-    })
-    .catch(error => console.error('Erreur:', error));
-}
 
-function loadUsers() {
-    const token = localStorage.getItem('token');
-    fetch('/api/users?size=100', {
-        headers: {
-            'Authorization': `Bearer ${token}`
+        async function loadProjects() {
+            try {
+                const token = getAuthToken();
+                const response = await fetch('/api/projects?size=100', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('filterProject');
+                    data.content.forEach(project => {
+                        const option = document.createElement('option');
+                        option.value = project.id;
+                        option.textContent = project.nom;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        const select = document.getElementById('filterAssignee');
-        data.content.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.id;
-            option.textContent = `${user.firstName} ${user.lastName}`;
-            select.appendChild(option);
-        });
-    })
-    .catch(error => console.error('Erreur:', error));
-}
 
-function loadTasks() {
-    const token = localStorage.getItem('token');
-    const projectId = document.getElementById('filterProject').value;
-    const assigneeId = document.getElementById('filterAssignee').value;
+        async function loadUsers() {
+            try {
+                const token = getAuthToken();
+                const response = await fetch('/api/users?size=100', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
 
-    let url = '/api/tasks?size=1000&sortBy=priorite&sortDir=DESC';
-    if (projectId) url += `&projectId=${projectId}`;
-    if (assigneeId) url += `&assignedToId=${assigneeId}`;
-
-    fetch(url, {
-        headers: {
-            'Authorization': `Bearer ${token}`
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('filterAssignee');
+                    data.content.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = `${user.firstName} ${user.lastName}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        displayTasksInColumns(data.content);
-    })
-    .catch(error => {
-        console.error('Erreur:', error);
-        ['todo', 'in-progress', 'done', 'blocked'].forEach(status => {
-            document.getElementById(`column-${status}`).innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle"></i> Erreur de chargement
-                </div>
-            `;
-        });
-    });
-}
 
-function displayTasksInColumns(tasks) {
-    // Group tasks by status
-    const tasksByStatus = {
-        'TODO': [],
-        'IN_PROGRESS': [],
-        'DONE': [],
-        'BLOCKED': []
-    };
+        async function loadTasks() {
+            try {
+                const token = getAuthToken();
+                const projectId = document.getElementById('filterProject').value;
+                const assigneeId = document.getElementById('filterAssignee').value;
 
-    tasks.forEach(task => {
-        if (tasksByStatus[task.statut]) {
-            tasksByStatus[task.statut].push(task);
+                let url = '/api/tasks?size=1000&sortBy=priorite&sortDir=DESC';
+                if (projectId) url += `&projectId=${projectId}`;
+                if (assigneeId) url += `&assignedToId=${assigneeId}`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Erreur lors du chargement des tâches');
+                }
+
+                const data = await response.json();
+                allTasks = data.content;
+
+                displayKanbanBoard();
+
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('kanbanBoard').style.display = 'flex';
+            } catch (error) {
+                console.error('Erreur:', error);
+                showToast('Erreur lors du chargement des tâches: ' + error.message, 'error');
+            }
         }
-    });
 
-    // Display each column
-    displayColumn('todo', tasksByStatus.TODO);
-    displayColumn('in-progress', tasksByStatus.IN_PROGRESS);
-    displayColumn('done', tasksByStatus.DONE);
-    displayColumn('blocked', tasksByStatus.BLOCKED);
-}
+        function displayKanbanBoard() {
+            const statuses = ['TODO', 'IN_PROGRESS', 'DONE', 'BLOCKED'];
 
-function displayColumn(columnId, tasks) {
-    const column = document.getElementById(`column-${columnId}`);
-    const statusMap = {
-        'todo': 'TODO',
-        'in-progress': 'IN_PROGRESS',
-        'done': 'DONE',
-        'blocked': 'BLOCKED'
-    };
-    const status = statusMap[columnId];
+            statuses.forEach(status => {
+                const tasks = allTasks.filter(t => t.statut === status);
+                const container = document.getElementById(`cards-${status}`);
+                const countBadge = document.getElementById(`count-${status}`);
 
-    // Update count
-    document.getElementById(`count-${columnId}`).textContent = tasks.length;
+                countBadge.textContent = tasks.length;
 
-    if (tasks.length === 0) {
-        column.innerHTML = '<div class="empty-column">Aucune tâche</div>';
-        return;
-    }
+                if (tasks.length === 0) {
+                    container.innerHTML = '<div class="empty-column">Aucune tâche</div>';
+                } else {
+                    container.innerHTML = '';
+                    tasks.forEach(task => {
+                        container.appendChild(createTaskCard(task));
+                    });
+                }
+            });
 
-    let html = '';
-    tasks.forEach(task => {
-        const priorityBadge = getPriorityBadge(task.priorite);
-        const assigneeInitials = task.assignedToName ?
-            task.assignedToName.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
-        const assigneeName = task.assignedToName || 'Non assigné';
+            // Activer le drag & drop
+            setupDragAndDrop();
+        }
 
-        html += `
-            <div class="kanban-card" onclick="window.location.href='/tasks/${task.id}'">
+        function createTaskCard(task) {
+            const card = document.createElement('div');
+            card.className = 'kanban-card';
+            card.draggable = true;
+            card.dataset.taskId = task.id;
+            card.dataset.taskStatus = task.statut;
+
+            const borderColors = {
+                'TODO': '#6c757d',
+                'IN_PROGRESS': '#0d6efd',
+                'DONE': '#198754',
+                'BLOCKED': '#dc3545'
+            };
+            card.style.borderLeftColor = borderColors[task.statut];
+
+            const priorityLabels = {
+                'LOW': 'Basse',
+                'MEDIUM': 'Moyenne',
+                'HIGH': 'Haute',
+                'URGENT': 'Urgente'
+            };
+
+            const assigneeInitials = task.assignedToName ?
+                task.assignedToName.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
+            const assigneeName = task.assignedToName || 'Non assigné';
+
+            card.innerHTML = `
                 <div class="kanban-card-title">${task.titre}</div>
-                <div class="kanban-card-project">
-                    <i class="bi bi-folder"></i> ${task.projectNom}
+                <div class="kanban-card-project"><i class="fas fa-folder me-1"></i>${task.projectNom}</div>
+                <div class="kanban-card-dates">
+                    <span><i class="far fa-calendar me-1"></i>${formatDate(task.dateDebut)}</span>
+                    <span><i class="far fa-calendar-check me-1"></i>${formatDate(task.dateFin)}</span>
                 </div>
-                <div>${priorityBadge}</div>
+                <div class="kanban-card-priority priority-${task.priorite}">
+                    ${priorityLabels[task.priorite] || task.priorite}
+                </div>
                 <div class="kanban-card-footer">
                     <div class="kanban-card-assignee">
                         <div class="assignee-avatar">${assigneeInitials}</div>
-                        <span>${assigneeName}</span>
+                        ${assigneeName}
                     </div>
-                    <small class="text-muted">${formatDate(task.dateFin)}</small>
                 </div>
-            </div>
-        `;
-    });
+            `;
 
-    column.innerHTML = html;
-}
+            card.addEventListener('click', function(e) {
+                window.location.href = `/tasks/${task.id}`;
+            });
 
-function getPriorityBadge(priority) {
-    const badges = {
-        'LOW': '<span class="badge bg-secondary">Basse</span>',
-        'MEDIUM': '<span class="badge bg-info">Moyenne</span>',
-        'HIGH': '<span class="badge bg-warning">Haute</span>',
-        'URGENT': '<span class="badge bg-danger">Urgente</span>'
-    };
-    return badges[priority] || priority;
-}
+            return card;
+        }
 
-function formatDate(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-}
-</script>
+        function setupDragAndDrop() {
+            const cards = document.querySelectorAll('.kanban-card');
+            const columns = document.querySelectorAll('.kanban-cards');
 
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+            });
+
+            columns.forEach(column => {
+                column.addEventListener('dragover', handleDragOver);
+                column.addEventListener('drop', handleDrop);
+                column.addEventListener('dragleave', handleDragLeave);
+            });
+        }
+
+        let draggedCard = null;
+
+        function handleDragStart(e) {
+            draggedCard = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.kanban-column').forEach(col => {
+                col.classList.remove('drag-over');
+            });
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const column = this.closest('.kanban-column');
+            column.classList.add('drag-over');
+            return false;
+        }
+
+        function handleDragLeave(e) {
+            const column = this.closest('.kanban-column');
+            column.classList.remove('drag-over');
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+
+            const column = this.closest('.kanban-column');
+            column.classList.remove('drag-over');
+
+            if (!draggedCard) return;
+
+            const newStatus = column.dataset.status;
+            const oldStatus = draggedCard.dataset.taskStatus;
+            const taskId = draggedCard.dataset.taskId;
+
+            if (newStatus === oldStatus) return;
+
+            // Mettre à jour le statut via l'API
+            await updateTaskStatus(taskId, newStatus);
+        }
+
+        async function updateTaskStatus(taskId, newStatus) {
+            try {
+                const token = getAuthToken();
+
+                const response = await fetch(`/api/tasks/${taskId}/status?status=${newStatus}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Erreur lors de la mise à jour du statut');
+                }
+
+                showToast('Statut de la tâche mis à jour avec succès', 'success');
+
+                // Recharger les tâches
+                await loadTasks();
+            } catch (error) {
+                console.error('Erreur:', error);
+                showToast('Erreur lors de la mise à jour: ' + error.message, 'error');
+                // Recharger pour annuler le changement visuel
+                await loadTasks();
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        }
+    </script>
 </body>
 </html>
