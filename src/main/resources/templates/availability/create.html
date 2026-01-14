@@ -20,11 +20,18 @@
             <div class="card-slack">
                 <form id="createAvailabilityForm">
                     <div class="mb-3" id="userSelectContainer">
-                        <label for="userId" class="form-label">Collaborateur <span class="text-danger">*</span></label>
-                        <select class="form-select" id="userId" required>
-                            <option value="">Sélectionner un collaborateur</option>
+                        <label for="userId" class="form-label">Collaborateur(s) <span class="text-danger">*</span></label>
+                        <div class="mb-2" id="selectAllContainer" style="display: none;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAllUsers">
+                                <label class="form-check-label" for="selectAllUsers">
+                                    <strong>Sélectionner tous les collaborateurs</strong>
+                                </label>
+                            </div>
+                        </div>
+                        <select class="form-select" id="userId" multiple size="6">
                         </select>
-                        <small class="text-muted">Pour les managers uniquement</small>
+                        <small class="text-muted">Maintenez Ctrl pour sélectionner plusieurs collaborateurs (Managers uniquement)</small>
                     </div>
 
                     <div class="row">
@@ -100,9 +107,13 @@ function loadUsers() {
     .then(response => response.json())
     .then(data => {
         const select = document.getElementById('userId');
+        const selectAllContainer = document.getElementById('selectAllContainer');
+        const selectAllCheckbox = document.getElementById('selectAllUsers');
 
         // Si l'utilisateur est MANAGER ou ADMIN, il peut déclarer pour tout le monde
         if (currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN') {
+            selectAllContainer.style.display = 'block';
+
             data.content.forEach(user => {
                 const option = document.createElement('option');
                 option.value = user.id;
@@ -112,6 +123,21 @@ function loadUsers() {
                 }
                 select.appendChild(option);
             });
+
+            // Gestion du "Sélectionner tous"
+            selectAllCheckbox.addEventListener('change', function() {
+                const options = select.querySelectorAll('option');
+                options.forEach(option => {
+                    option.selected = this.checked;
+                });
+            });
+
+            // Mettre à jour la checkbox si tous sont sélectionnés manuellement
+            select.addEventListener('change', function() {
+                const options = select.querySelectorAll('option');
+                const allSelected = Array.from(options).every(opt => opt.selected);
+                selectAllCheckbox.checked = allSelected;
+            });
         } else {
             // Sinon, il ne peut déclarer que pour lui-même
             const option = document.createElement('option');
@@ -120,6 +146,8 @@ function loadUsers() {
             option.selected = true;
             select.appendChild(option);
             select.disabled = true;
+            select.removeAttribute('multiple');
+            select.size = 1;
             document.getElementById('userSelectContainer').style.display = 'none';
         }
     })
@@ -136,32 +164,53 @@ function handleSubmit(e) {
     errorAlert.style.display = 'none';
     successAlert.style.display = 'none';
 
-    const availabilityData = {
-        userId: parseInt(document.getElementById('userId').value),
-        dateDebut: document.getElementById('dateDebut').value,
-        dateFin: document.getElementById('dateFin').value,
-        disponible: document.getElementById('disponible').value === 'true',
-        commentaire: document.getElementById('commentaire').value || null
-    };
+    const select = document.getElementById('userId');
+    const selectedUserIds = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
 
-    fetch('/api/availabilities', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(availabilityData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => {
-                throw new Error(err.message || 'Erreur lors de la création');
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        successAlert.textContent = 'Disponibilité déclarée avec succès !';
+    if (selectedUserIds.length === 0) {
+        errorAlert.textContent = 'Veuillez sélectionner au moins un collaborateur';
+        errorAlert.style.display = 'block';
+        return;
+    }
+
+    const dateDebut = document.getElementById('dateDebut').value;
+    const dateFin = document.getElementById('dateFin').value;
+    const disponible = document.getElementById('disponible').value === 'true';
+    const commentaire = document.getElementById('commentaire').value || null;
+
+    // Créer une disponibilité pour chaque utilisateur sélectionné
+    const promises = selectedUserIds.map(userId => {
+        const availabilityData = {
+            userId: userId,
+            dateDebut: dateDebut,
+            dateFin: dateFin,
+            disponible: disponible,
+            commentaire: commentaire
+        };
+
+        return fetch('/api/availabilities', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(availabilityData)
+        }).then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'Erreur lors de la création');
+                });
+            }
+            return response.json();
+        });
+    });
+
+    Promise.all(promises)
+    .then(results => {
+        const count = results.length;
+        successAlert.textContent = count > 1
+            ? `${count} disponibilités déclarées avec succès !`
+            : 'Disponibilité déclarée avec succès !';
         successAlert.style.display = 'block';
 
         setTimeout(() => {

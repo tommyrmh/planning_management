@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Calendrier Planning - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-calendar3"></i> Calendrier de Planning</h1>
+        <div>
+            <a href="/planning/new" class="btn btn-slack-primary" id="createPlanningBtn" style="display: none;">
+                <i class="bi bi-plus-circle"></i> Créer un Planning
+            </a>
+            <a href="/planning" class="btn btn-slack-secondary">
+                <i class="bi bi-list"></i> Liste
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card-slack mb-4">
+        <h3 class="card-slack-title"><i class="bi bi-funnel"></i> Filtres</h3>
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Collaborateur</label>
+                <select class="form-select" id="filterUser">
+                    <option value="">Tous les collaborateurs</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Date de début</label>
+                <input type="date" class="form-control" id="filterStartDate">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Date de fin</label>
+                <input type="date" class="form-control" id="filterEndDate">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-slack-primary w-100" onclick="loadPlannings()">
+                    <i class="bi bi-search"></i> Rechercher
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Legend -->
+    <div class="card-slack mb-4">
+        <div class="d-flex gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 20px; height: 20px; background: #0d6efd; border-radius: 3px;"></div>
+                <span>Réunion</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 20px; height: 20px; background: #198754; border-radius: 3px;"></div>
+                <span>Travail</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 20px; height: 20px; background: #ffc107; border-radius: 3px;"></div>
+                <span>Formation</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 20px; height: 20px; background: #6f42c1; border-radius: 3px;"></div>
+                <span>Congé</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 20px; height: 20px; background: #dc3545; border-radius: 3px;"></div>
+                <span>Absence</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 20px; height: 20px; background: #6c757d; border-radius: 3px;"></div>
+                <span>Autre</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="card-slack" id="calendarContainer">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<style>
+.planning-timeline {
+    margin-top: 20px;
+}
+
+.user-row {
+    margin-bottom: 25px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.user-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: #1d1c1d;
+}
+
+.timeline-bar {
+    position: relative;
+    height: 60px;
+    background: #e9ecef;
+    border-radius: 5px;
+    overflow: visible;
+}
+
+.planning-event {
+    position: absolute;
+    height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 5px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    color: white;
+    overflow: hidden;
+    top: 5px;
+}
+
+.planning-event:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.event-title {
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-time {
+    font-size: 0.65rem;
+    opacity: 0.9;
+}
+
+.type-REUNION { background: #0d6efd; }
+.type-TRAVAIL { background: #198754; }
+.type-FORMATION { background: #ffc107; color: #000 !important; }
+.type-CONGE { background: #6f42c1; }
+.type-ABSENCE { background: #dc3545; }
+.type-AUTRE { background: #6c757d; }
+
+.timeline-dates {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+</style>
+
+<script>
+let allPlannings = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.replace('/login');
+        return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && (user.role === 'MANAGER' || user.role === 'ADMIN')) {
+        document.getElementById('createPlanningBtn').style.display = 'inline-block';
+    }
+
+    // Définir les dates par défaut (semaine actuelle)
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - today.getDay() + 1);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    document.getElementById('filterStartDate').value = formatDateForInput(monday);
+    document.getElementById('filterEndDate').value = formatDateForInput(sunday);
+
+    loadUsers();
+    loadPlannings();
+});
+
+function loadUsers() {
+    const token = localStorage.getItem('token');
+    fetch('/api/users?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('filterUser');
+        data.content.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.firstName} ${user.lastName}`;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function loadPlannings() {
+    const token = localStorage.getItem('token');
+    const userId = document.getElementById('filterUser').value;
+    const startDate = document.getElementById('filterStartDate').value;
+    const endDate = document.getElementById('filterEndDate').value;
+
+    if (!startDate || !endDate) {
+        alert('Veuillez sélectionner une période');
+        return;
+    }
+
+    const startDateTime = `${startDate}T00:00:00`;
+    const endDateTime = `${endDate}T23:59:59`;
+
+    let url = `/api/plannings/range?startDate=${startDateTime}&endDate=${endDateTime}`;
+
+    fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        allPlannings = data;
+        if (userId) {
+            allPlannings = allPlannings.filter(p => p.userId == userId);
+        }
+        displayCalendar(startDateTime, endDateTime);
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        document.getElementById('calendarContainer').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> Erreur lors du chargement des plannings
+            </div>
+        `;
+    });
+}
+
+function displayCalendar(startDateTime, endDateTime) {
+    const container = document.getElementById('calendarContainer');
+
+    if (allPlannings.length === 0) {
+        container.innerHTML = `
+            <div class="no-data">
+                <i class="bi bi-calendar-x" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="mt-3">Aucun planning trouvé pour cette période</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Grouper par utilisateur
+    const byUser = {};
+    allPlannings.forEach(planning => {
+        if (!byUser[planning.userId]) {
+            byUser[planning.userId] = {
+                name: planning.userName,
+                plannings: []
+            };
+        }
+        byUser[planning.userId].plannings.push(planning);
+    });
+
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+    const totalMs = end - start;
+
+    let html = '<div class="planning-timeline">';
+
+    Object.keys(byUser).forEach(userId => {
+        const userData = byUser[userId];
+        html += `
+            <div class="user-row">
+                <div class="user-name">
+                    <i class="bi bi-person-circle"></i> ${userData.name}
+                </div>
+                <div class="timeline-bar">
+        `;
+
+        userData.plannings.forEach(planning => {
+            const planStart = new Date(planning.dateDebut);
+            const planEnd = new Date(planning.dateFin);
+
+            // Calculer la position et la largeur
+            const msFromStart = Math.max(0, planStart - start);
+            const duration = planEnd - planStart;
+
+            const left = (msFromStart / totalMs) * 100;
+            const width = (duration / totalMs) * 100;
+
+            const typeLabels = {
+                'REUNION': 'Réunion',
+                'TRAVAIL': 'Travail',
+                'FORMATION': 'Formation',
+                'CONGE': 'Congé',
+                'ABSENCE': 'Absence',
+                'AUTRE': 'Autre'
+            };
+
+            html += `
+                <div class="planning-event type-${planning.type}"
+                     style="left: ${left}%; width: ${width}%;"
+                     onclick="showPlanningDetails(${planning.id})"
+                     title="${planning.titre}">
+                    <div class="event-title">${planning.titre}</div>
+                    <div class="event-time">${formatDateTime(planning.dateDebut)} - ${formatDateTime(planning.dateFin)}</div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+                <div class="timeline-dates">
+                    <span>${formatDate(startDateTime)}</span>
+                    <span>${formatDate(endDateTime)}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function showPlanningDetails(id) {
+    const planning = allPlannings.find(p => p.id === id);
+    if (!planning) return;
+
+    const typeLabels = {
+        'REUNION': 'Réunion',
+        'TRAVAIL': 'Travail',
+        'FORMATION': 'Formation',
+        'CONGE': 'Congé',
+        'ABSENCE': 'Absence',
+        'AUTRE': 'Autre'
+    };
+
+    let message = `
+        ${planning.titre}
+
+        Collaborateur: ${planning.userName}
+        Type: ${typeLabels[planning.type]}
+        Du: ${formatDateTime(planning.dateDebut)}
+        Au: ${formatDateTime(planning.dateFin)}
+    `;
+
+    if (planning.description) {
+        message += `\n\nDescription: ${planning.description}`;
+    }
+
+    if (planning.projectNom) {
+        message += `\n\nProjet: ${planning.projectNom}`;
+    }
+
+    if (planning.taskTitre) {
+        message += `\n\nTâche: ${planning.taskTitre}`;
+    }
+
+    alert(message);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+</script>
+
+</body>
+</html>

@@ -55,6 +55,13 @@ public class AvailabilityService {
     }
 
     @Transactional(readOnly = true)
+    public List<AvailabilityResponse> getAllAvailabilities() {
+        return availabilityRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<AvailabilityResponse> getAvailabilitiesByUser(Long userId) {
         return availabilityRepository.findByUserId(userId).stream()
                 .map(this::mapToResponse)

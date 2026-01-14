@@ -100,4 +100,19 @@ public class ViewController {
     public String newAvailability() {
         return "availability/create";
     }
+
+    @GetMapping("/planning")
+    public String planning() {
+        return "planning/list";
+    }
+
+    @GetMapping("/planning/calendar")
+    public String planningCalendar() {
+        return "planning/calendar";
+    }
+
+    @GetMapping("/planning/new")
+    public String newPlanning() {
+        return "planning/create";
+    }
 }

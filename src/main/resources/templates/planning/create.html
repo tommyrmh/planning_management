@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Créer un Planning - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-calendar-plus"></i> Créer un Planning</h1>
+        <a href="/planning" class="btn btn-slack-secondary">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-slack">
+                <form id="createPlanningForm">
+                    <div class="mb-3">
+                        <label for="titre" class="form-label">Titre <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="titre" required
+                               placeholder="Ex: Réunion d'équipe">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" rows="3"
+                                  placeholder="Description détaillée du planning..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="userId" class="form-label">Collaborateur <span class="text-danger">*</span></label>
+                        <select class="form-select" id="userId" required>
+                            <option value="">Sélectionner un collaborateur</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="type" class="form-label">Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="type" required>
+                            <option value="">Sélectionner un type</option>
+                            <option value="REUNION">Réunion</option>
+                            <option value="TRAVAIL">Travail</option>
+                            <option value="FORMATION">Formation</option>
+                            <option value="CONGE">Congé</option>
+                            <option value="ABSENCE">Absence</option>
+                            <option value="AUTRE">Autre</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="dateDebut" class="form-label">Date et heure de début <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" id="dateDebut" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="dateFin" class="form-label">Date et heure de fin <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" id="dateFin" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="projectId" class="form-label">Projet (optionnel)</label>
+                            <select class="form-select" id="projectId">
+                                <option value="">Aucun projet</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="taskId" class="form-label">Tâche (optionnel)</label>
+                            <select class="form-select" id="taskId">
+                                <option value="">Aucune tâche</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="errorAlert" class="alert alert-danger" style="display: none;"></div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-slack-primary">
+                            <i class="bi bi-check-circle"></i> Créer le Planning
+                        </button>
+                        <a href="/planning" class="btn btn-slack-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.replace('/login');
+        return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && user.role !== 'MANAGER' && user.role !== 'ADMIN') {
+        window.location.replace('/planning');
+        return;
+    }
+
+    loadUsers();
+    loadProjects();
+    loadTasks();
+
+    document.getElementById('createPlanningForm').addEventListener('submit', handleSubmit);
+});
+
+function loadUsers() {
+    const token = localStorage.getItem('token');
+    fetch('/api/users?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('userId');
+        data.content.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.firstName} ${user.lastName}`;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function loadProjects() {
+    const token = localStorage.getItem('token');
+    fetch('/api/projects?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('projectId');
+        data.content.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.nom;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function loadTasks() {
+    const token = localStorage.getItem('token');
+    fetch('/api/tasks?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('taskId');
+        data.content.forEach(task => {
+            const option = document.createElement('option');
+            option.value = task.id;
+            option.textContent = task.titre;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function handleSubmit(e) {
+    e.preventDefault();
+
+    const token = localStorage.getItem('token');
+    const errorAlert = document.getElementById('errorAlert');
+    errorAlert.style.display = 'none';
+
+    const planningData = {
+        titre: document.getElementById('titre').value,
+        description: document.getElementById('description').value || null,
+        userId: parseInt(document.getElementById('userId').value),
+        type: document.getElementById('type').value,
+        dateDebut: document.getElementById('dateDebut').value,
+        dateFin: document.getElementById('dateFin').value,
+        projectId: document.getElementById('projectId').value ? parseInt(document.getElementById('projectId').value) : null,
+        taskId: document.getElementById('taskId').value ? parseInt(document.getElementById('taskId').value) : null
+    };
+
+    fetch('/api/plannings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(planningData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Erreur lors de la création');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        window.location.href = '/planning';
+    })
+    .catch(error => {
+        errorAlert.textContent = error.message;
+        errorAlert.style.display = 'block';
+    });
+}
+</script>
+
+</body>
+</html>

@@ -31,6 +31,12 @@ public class AvailabilityController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping
+    public ResponseEntity<List<AvailabilityResponse>> getAllAvailabilities() {
+        List<AvailabilityResponse> availabilities = availabilityService.getAllAvailabilities();
+        return ResponseEntity.ok(availabilities);
+    }
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<AvailabilityResponse>> getAvailabilitiesByUser(
             @PathVariable Long userId) {

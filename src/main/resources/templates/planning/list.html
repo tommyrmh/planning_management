@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head}">
-    <title>Disponibilités - Planning Management</title>
+    <title>Plannings - Planning Management</title>
 </head>
 <body>
 
@@ -9,13 +9,13 @@
 
 <div class="main-container">
     <div class="page-header">
-        <h1><i class="bi bi-clock"></i> Gestion des Disponibilités</h1>
+        <h1><i class="bi bi-calendar3"></i> Gestion des Plannings</h1>
         <div>
-            <a href="/availability/calendar" class="btn btn-slack-secondary">
-                <i class="bi bi-calendar3"></i> Vue Calendrier
+            <a href="/planning/calendar" class="btn btn-slack-secondary">
+                <i class="bi bi-calendar"></i> Vue Calendrier
             </a>
-            <a href="/availability/new" class="btn btn-slack-primary">
-                <i class="bi bi-plus-circle"></i> Déclarer Disponibilité
+            <a href="/planning/new" class="btn btn-slack-primary" id="createPlanningBtn" style="display: none;">
+                <i class="bi bi-plus-circle"></i> Créer un Planning
             </a>
         </div>
     </div>
@@ -31,7 +31,7 @@
                 </select>
             </div>
             <div class="col-md-6 d-flex align-items-end">
-                <button type="button" class="btn btn-slack-primary w-100" onclick="loadAvailabilities()">
+                <button type="button" class="btn btn-slack-primary w-100" onclick="loadPlannings()">
                     <i class="bi bi-search"></i> Rechercher
                 </button>
             </div>
@@ -40,7 +40,7 @@
 
     <!-- List -->
     <div class="card-slack">
-        <div id="availabilitiesContainer">
+        <div id="planningsContainer">
             <div class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Chargement...</span>
@@ -65,8 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentUser = JSON.parse(localStorage.getItem('user'));
 
+    if (currentUser && (currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN')) {
+        document.getElementById('createPlanningBtn').style.display = 'inline-block';
+    }
+
     loadUsers();
-    loadAvailabilities();
+    loadPlannings();
 });
 
 function loadUsers() {
@@ -89,11 +93,11 @@ function loadUsers() {
     .catch(error => console.error('Erreur:', error));
 }
 
-function loadAvailabilities() {
+function loadPlannings() {
     const token = localStorage.getItem('token');
     const userId = document.getElementById('filterUser').value;
 
-    let url = userId ? `/api/availabilities/user/${userId}` : `/api/availabilities`;
+    let url = userId ? `/api/plannings/user/${userId}` : `/api/plannings`;
 
     fetch(url, {
         headers: {
@@ -102,58 +106,68 @@ function loadAvailabilities() {
     })
     .then(response => response.json())
     .then(data => {
-        displayAvailabilities(data);
+        displayPlannings(data);
     })
     .catch(error => {
         console.error('Erreur:', error);
-        document.getElementById('availabilitiesContainer').innerHTML = `
+        document.getElementById('planningsContainer').innerHTML = `
             <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle"></i> Erreur lors du chargement des disponibilités
+                <i class="bi bi-exclamation-triangle"></i> Erreur lors du chargement des plannings
             </div>
         `;
     });
 }
 
-function displayAvailabilities(availabilities) {
-    const container = document.getElementById('availabilitiesContainer');
+function displayPlannings(plannings) {
+    const container = document.getElementById('planningsContainer');
 
-    if (availabilities.length === 0) {
+    if (plannings.length === 0) {
         container.innerHTML = `
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                <p class="mt-3">Aucune disponibilité trouvée</p>
+                <p class="mt-3">Aucun planning trouvé</p>
             </div>
         `;
         return;
     }
 
     // Trier par date de début décroissante
-    availabilities.sort((a, b) => new Date(b.dateDebut) - new Date(a.dateDebut));
+    plannings.sort((a, b) => new Date(b.dateDebut) - new Date(a.dateDebut));
 
     let html = '<div class="table-responsive"><table class="table table-hover">';
     html += '<thead><tr>';
+    html += '<th>Titre</th>';
     html += '<th>Collaborateur</th>';
+    html += '<th>Type</th>';
     html += '<th>Période</th>';
-    html += '<th>Statut</th>';
-    html += '<th>Commentaire</th>';
+    html += '<th>Projet/Tâche</th>';
     html += '<th>Actions</th>';
     html += '</tr></thead><tbody>';
 
-    availabilities.forEach(avail => {
-        const statusBadge = avail.disponible ?
-            '<span class="badge bg-success">Disponible</span>' :
-            '<span class="badge bg-danger">Occupé</span>';
+    plannings.forEach(planning => {
+        const typeBadge = getTypeBadge(planning.type);
+        const canDelete = currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN';
 
-        const canDelete = currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN' || avail.userId === currentUser.id;
+        let projectTask = [];
+        if (planning.projectNom) {
+            projectTask.push(`<i class="bi bi-folder"></i> ${planning.projectNom}`);
+        }
+        if (planning.taskTitre) {
+            projectTask.push(`<i class="bi bi-check2-square"></i> ${planning.taskTitre}`);
+        }
 
         html += `<tr>`;
-        html += `<td><strong>${avail.userName}</strong></td>`;
-        html += `<td>${formatDate(avail.dateDebut)} - ${formatDate(avail.dateFin)}</td>`;
-        html += `<td>${statusBadge}</td>`;
-        html += `<td>${avail.commentaire || '-'}</td>`;
+        html += `<td><strong>${planning.titre}</strong></td>`;
+        html += `<td>${planning.userName}</td>`;
+        html += `<td>${typeBadge}</td>`;
+        html += `<td>
+            <div>${formatDateTime(planning.dateDebut)}</div>
+            <div>${formatDateTime(planning.dateFin)}</div>
+        </td>`;
+        html += `<td>${projectTask.join('<br>') || '-'}</td>`;
         html += `<td>`;
         if (canDelete) {
-            html += `<button class="btn btn-sm btn-danger" onclick="deleteAvailability(${avail.id})">
+            html += `<button class="btn btn-sm btn-danger" onclick="deletePlanning(${planning.id})">
                 <i class="bi bi-trash"></i> Supprimer
             </button>`;
         }
@@ -165,14 +179,26 @@ function displayAvailabilities(availabilities) {
     container.innerHTML = html;
 }
 
-function deleteAvailability(id) {
-    if (!confirm('Voulez-vous vraiment supprimer cette disponibilité ?')) {
+function getTypeBadge(type) {
+    const badges = {
+        'REUNION': '<span class="badge" style="background: #0d6efd;">Réunion</span>',
+        'TRAVAIL': '<span class="badge" style="background: #198754;">Travail</span>',
+        'FORMATION': '<span class="badge" style="background: #ffc107; color: #000;">Formation</span>',
+        'CONGE': '<span class="badge" style="background: #6f42c1;">Congé</span>',
+        'ABSENCE': '<span class="badge" style="background: #dc3545;">Absence</span>',
+        'AUTRE': '<span class="badge" style="background: #6c757d;">Autre</span>'
+    };
+    return badges[type] || type;
+}
+
+function deletePlanning(id) {
+    if (!confirm('Voulez-vous vraiment supprimer ce planning ?')) {
         return;
     }
 
     const token = localStorage.getItem('token');
 
-    fetch(`/api/availabilities/${id}`, {
+    fetch(`/api/plannings/${id}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -180,15 +206,21 @@ function deleteAvailability(id) {
     })
     .then(response => {
         if (!response.ok) throw new Error('Erreur lors de la suppression');
-        loadAvailabilities();
+        loadPlannings();
     })
     .catch(error => alert(error.message));
 }
 
-function formatDate(dateString) {
+function formatDateTime(dateString) {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR');
+    return date.toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 </script>
 

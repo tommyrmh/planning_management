@@ -59,10 +59,18 @@
                 <h3 class="card-slack-title"><i class="bi bi-person-plus"></i> Assigner / Réassigner</h3>
                 <form id="assignForm">
                     <div class="mb-3">
-                        <label for="assignUserId" class="form-label">Collaborateur</label>
-                        <select class="form-select" id="assignUserId" required>
-                            <option value="">Sélectionner un collaborateur</option>
+                        <label for="assignUserId" class="form-label">Collaborateur(s)</label>
+                        <div class="mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAllAssign">
+                                <label class="form-check-label" for="selectAllAssign">
+                                    <strong>Sélectionner tous</strong>
+                                </label>
+                            </div>
+                        </div>
+                        <select class="form-select" id="assignUserId" multiple size="5">
                         </select>
+                        <small class="text-muted">Maintenez Ctrl pour sélectionner plusieurs collaborateurs</small>
                     </div>
                     <button type="submit" class="btn btn-slack-primary w-100">
                         <i class="bi bi-check"></i> Assigner
@@ -206,11 +214,28 @@ function loadUsers() {
     .then(response => response.json())
     .then(data => {
         const select = document.getElementById('assignUserId');
+        const selectAllCheckbox = document.getElementById('selectAllAssign');
+
         data.content.forEach(user => {
             const option = document.createElement('option');
             option.value = user.id;
             option.textContent = `${user.firstName} ${user.lastName}`;
             select.appendChild(option);
+        });
+
+        // Gestion du "Sélectionner tous"
+        selectAllCheckbox.addEventListener('change', function() {
+            const options = select.querySelectorAll('option');
+            options.forEach(option => {
+                option.selected = this.checked;
+            });
+        });
+
+        // Mettre à jour la checkbox si tous sont sélectionnés manuellement
+        select.addEventListener('change', function() {
+            const options = select.querySelectorAll('option');
+            const allSelected = Array.from(options).every(opt => opt.selected);
+            selectAllCheckbox.checked = allSelected;
         });
     })
     .catch(error => console.error('Erreur:', error));
@@ -243,26 +268,40 @@ function changeStatus(newStatus) {
 function handleAssign(e) {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    const userId = document.getElementById('assignUserId').value;
+    const select = document.getElementById('assignUserId');
+    const selectedUserIds = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+
+    if (selectedUserIds.length === 0) {
+        alert('Veuillez sélectionner au moins un collaborateur');
+        return;
+    }
 
     const isManager = currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN';
     const endpoint = isManager ? `/api/tasks/${taskId}/assign` : `/api/tasks/${taskId}/reassign`;
 
-    fetch(endpoint, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ userId: parseInt(userId) })
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Erreur lors de l\'assignation');
-        return response.json();
-    })
+    // Assigner à chaque utilisateur sélectionné
+    const promises = selectedUserIds.map(userId => {
+        return fetch(endpoint, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ userId: userId })
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Erreur lors de l\'assignation');
+            return response.json();
+        });
+    });
+
+    Promise.all(promises)
     .then(() => {
         loadTask();
-        alert('Tâche assignée avec succès');
+        const count = selectedUserIds.length;
+        alert(count > 1
+            ? `Tâche assignée à ${count} collaborateurs avec succès`
+            : 'Tâche assignée avec succès');
     })
     .catch(error => alert(error.message));
 }
