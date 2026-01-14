@@ -7,6 +7,8 @@ import com.gestion.planning.exception.ResourceNotFoundException;
 import com.gestion.planning.model.User;
 import com.gestion.planning.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,19 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    public Page<ProfileResponse> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(user -> ProfileResponse.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .firstName(user.getFirstName())
+                        .lastName(user.getLastName())
+                        .department(user.getDepartment())
+                        .role(user.getRole())
+                        .build());
+    }
 
     public ProfileResponse getProfile(String username) {
         User user = userRepository.findByUsername(username)
