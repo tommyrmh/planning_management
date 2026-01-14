@@ -20,7 +20,13 @@ function getAuthToken() {
 function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    // Use replace to prevent going back
+    window.location.replace('/login');
+    // Clear browser history
+    window.history.pushState(null, '', window.location.href);
+    window.onpopstate = function() {
+        window.location.replace('/login');
+    };
 }
 
 // API request helper with JWT

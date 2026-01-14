@@ -59,9 +59,8 @@
         </form>
 
         <div class="auth-footer">
-            <p class="mb-0">
-                Pas encore de compte ?
-                <a th:href="@{/register}">Créer un compte</a>
+            <p class="mb-0 text-muted">
+                <i class="bi bi-info-circle"></i> Contactez un administrateur pour créer votre compte
             </p>
         </div>
     </div>
@@ -70,6 +69,11 @@
 <div th:replace="~{fragments/layout :: scripts}"></div>
 
 <script>
+// Redirect to dashboard if already logged in
+if (localStorage.getItem('token')) {
+    window.location.href = '/dashboard';
+}
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 

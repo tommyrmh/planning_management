@@ -112,11 +112,16 @@
 <div th:replace="~{fragments/layout :: scripts}"></div>
 
 <script>
+// Immediate redirect if not authenticated (before DOM loads)
+if (!localStorage.getItem('token')) {
+    window.location.replace('/login');
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('token');
 
     if (!token) {
-        window.location.href = '/login';
+        window.location.replace('/login');
         return;
     }
 

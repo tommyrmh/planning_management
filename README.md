@@ -44,13 +44,14 @@ Le projet suit une architecture en couches :
 
 ### 1. Authentification & Autorisation ✅
 
-#### Inscription
+#### Inscription (Réservée aux Admins)
 - Endpoint : `POST /api/auth/register`
+- **Nécessite authentification ADMIN**
 - Création d'un compte avec : username, email, password, firstName, lastName, department
 - Validation des données
 - Vérification de l'unicité du username et email
 - Hashage du mot de passe avec BCrypt
-- Génération automatique du token JWT
+- Interface web accessible via `/register` (admins uniquement)
 
 #### Connexion
 - Endpoint : `POST /api/auth/login`
@@ -132,9 +133,20 @@ server.port=8080
 
 ### Sécurité
 
-- Les endpoints `/api/auth/**` sont accessibles sans authentification
-- Tous les autres endpoints nécessitent un token JWT valide
-- Le token doit être passé dans le header `Authorization: Bearer <token>`
+- **Endpoints publics :**
+  - `/api/auth/login` - Connexion accessible à tous
+  - Pages statiques (CSS, JS, images)
+
+- **Endpoints protégés (JWT requis) :**
+  - `/api/profile` - Gestion du profil utilisateur
+  - Tous les autres endpoints API
+
+- **Endpoints Admin uniquement :**
+  - `/api/auth/register` - Création d'utilisateurs (rôle ADMIN requis)
+  - `/register` - Page de création d'utilisateurs
+
+- Le token JWT doit être passé dans le header `Authorization: Bearer <token>`
+- Les interfaces web gèrent automatiquement l'authentification via localStorage
 
 ## Démarrage
 
@@ -144,14 +156,45 @@ mvn spring-boot:run
 
 L'application démarre sur `http://localhost:8080`
 
+## 🔐 Compte Admin par Défaut
+
+Au premier démarrage de l'application, un **compte administrateur** est créé automatiquement :
+
+| Champ | Valeur |
+|-------|--------|
+| **Username** | `admin` |
+| **Password** | `admin123` |
+| **Email** | admin@planning.com |
+| **Rôle** | ADMIN |
+
+### Connexion Admin
+
+1. Ouvrez votre navigateur sur `http://localhost:8080`
+2. Connectez-vous avec :
+   - **Username:** `admin`
+   - **Password:** `admin123`
+3. Vous accédez au dashboard administrateur
+
+### Création d'Utilisateurs
+
+⚠️ **Important :** Seuls les administrateurs peuvent créer de nouveaux utilisateurs.
+
+Pour créer un nouveau compte :
+1. Connectez-vous en tant qu'admin
+2. Cliquez sur **"Créer un Utilisateur"** dans le dashboard
+3. Remplissez le formulaire avec les informations du nouvel utilisateur
+4. Sélectionnez le rôle approprié (COLLABORATOR, MANAGER, ADMIN)
+5. Cliquez sur **"Créer mon compte"**
+
 ## API Endpoints
 
 ### Authentification
 
-#### Inscription
+#### Inscription (Admin uniquement)
 ```http
 POST /api/auth/register
 Content-Type: application/json
+Authorization: Bearer <admin_token>
 
 {
   "username": "john.doe",
@@ -163,6 +206,8 @@ Content-Type: application/json
   "role": "COLLABORATOR"
 }
 ```
+
+⚠️ **Note:** Cet endpoint nécessite un token JWT d'un utilisateur avec le rôle ADMIN.
 
 **Réponse (200 OK)** :
 ```json

@@ -8,9 +8,9 @@
 <div class="auth-container">
     <div class="auth-card">
         <div class="auth-logo">
-            <h1><i class="bi bi-calendar-check"></i></h1>
-            <h2>Planning Management</h2>
-            <p>Créez votre compte</p>
+            <h1><i class="bi bi-person-plus"></i></h1>
+            <h2>Créer un Utilisateur</h2>
+            <p>Espace réservé aux administrateurs</p>
         </div>
 
         <!-- Error Alert -->
@@ -117,6 +117,15 @@
 <div th:replace="~{fragments/layout :: scripts}"></div>
 
 <script>
+// Check if user is admin
+const token = localStorage.getItem('token');
+const user = token ? JSON.parse(localStorage.getItem('user')) : null;
+
+if (!token || !user || user.role !== 'ADMIN') {
+    alert('Seuls les administrateurs peuvent créer des utilisateurs.');
+    window.location.replace('/login');
+}
+
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -139,18 +148,18 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     };
 
     try {
+        const adminToken = localStorage.getItem('token');
         const response = await fetch('/api/auth/register', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken}`
             },
             body: JSON.stringify(formData)
         });
 
         if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data));
+            alert('✅ Utilisateur créé avec succès !');
             window.location.href = '/dashboard';
         } else {
             const error = await response.json();

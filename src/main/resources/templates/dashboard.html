@@ -164,6 +164,9 @@
                     <a th:href="@{/profile}" class="btn btn-slack-secondary">
                         <i class="bi bi-person"></i> Voir Mon Profil
                     </a>
+                    <a th:href="@{/register}" class="btn btn-slack-primary" id="adminCreateUserBtn" style="display: none;">
+                        <i class="bi bi-person-plus"></i> Créer un Utilisateur
+                    </a>
                 </div>
             </div>
 
@@ -229,11 +232,16 @@
 <div th:replace="~{fragments/layout :: scripts}"></div>
 
 <script>
+// Immediate redirect if not authenticated (before DOM loads)
+if (!localStorage.getItem('token')) {
+    window.location.replace('/login');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
 
     if (!token) {
-        window.location.href = '/login';
+        window.location.replace('/login');
         return;
     }
 
@@ -241,6 +249,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = JSON.parse(localStorage.getItem('user'));
     if (user) {
         document.getElementById('welcomeName').textContent = user.firstName || user.username;
+
+        // Show admin-only buttons
+        if (user.role === 'ADMIN') {
+            const adminBtn = document.getElementById('adminCreateUserBtn');
+            if (adminBtn) {
+                adminBtn.style.display = 'block';
+            }
+        }
     }
 });
 </script>
