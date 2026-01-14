@@ -35,4 +35,29 @@ public class ViewController {
     public String editProfile() {
         return "profile/edit";
     }
+
+    @GetMapping("/projects")
+    public String projects() {
+        return "projects/list";
+    }
+
+    @GetMapping("/projects/board")
+    public String projectsBoard() {
+        return "projects/board";
+    }
+
+    @GetMapping("/projects/new")
+    public String newProject() {
+        return "projects/create";
+    }
+
+    @GetMapping("/projects/{id}")
+    public String projectDetail() {
+        return "projects/detail";
+    }
+
+    @GetMapping("/projects/{id}/edit")
+    public String editProject() {
+        return "projects/edit";
+    }
 }
