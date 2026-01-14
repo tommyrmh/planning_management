@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Modifier Tâche - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-pencil"></i> Modifier la Tâche</h1>
+        <a href="#" onclick="history.back(); return false;" class="btn btn-slack-secondary">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-slack">
+                <form id="editTaskForm">
+                    <div class="mb-3">
+                        <label for="titre" class="form-label">Titre</label>
+                        <input type="text" class="form-control" id="titre">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" rows="4"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="dateDebut" class="form-label">Date de début</label>
+                            <input type="date" class="form-control" id="dateDebut">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="dateFin" class="form-label">Date de fin</label>
+                            <input type="date" class="form-control" id="dateFin">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="priorite" class="form-label">Priorité</label>
+                        <select class="form-select" id="priorite">
+                            <option value="LOW">Basse</option>
+                            <option value="MEDIUM">Moyenne</option>
+                            <option value="HIGH">Haute</option>
+                            <option value="URGENT">Urgente</option>
+                        </select>
+                    </div>
+
+                    <div id="errorAlert" class="alert alert-danger" style="display: none;"></div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-slack-primary">
+                            <i class="bi bi-check-circle"></i> Enregistrer
+                        </button>
+                        <a href="#" onclick="history.back(); return false;" class="btn btn-slack-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+let taskId;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.replace('/login');
+        return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && user.role !== 'MANAGER' && user.role !== 'ADMIN') {
+        window.location.replace('/tasks');
+        return;
+    }
+
+    taskId = window.location.pathname.split('/')[2];
+    loadTask();
+
+    document.getElementById('editTaskForm').addEventListener('submit', handleSubmit);
+});
+
+function loadTask() {
+    const token = localStorage.getItem('token');
+
+    fetch(`/api/tasks/${taskId}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Tâche non trouvée');
+        return response.json();
+    })
+    .then(task => {
+        document.getElementById('titre').value = task.titre;
+        document.getElementById('description').value = task.description || '';
+        document.getElementById('dateDebut').value = task.dateDebut;
+        document.getElementById('dateFin').value = task.dateFin;
+        document.getElementById('priorite').value = task.priorite;
+    })
+    .catch(error => {
+        const errorAlert = document.getElementById('errorAlert');
+        errorAlert.textContent = error.message;
+        errorAlert.style.display = 'block';
+    });
+}
+
+function handleSubmit(e) {
+    e.preventDefault();
+
+    const token = localStorage.getItem('token');
+    const errorAlert = document.getElementById('errorAlert');
+    errorAlert.style.display = 'none';
+
+    const taskData = {
+        titre: document.getElementById('titre').value,
+        description: document.getElementById('description').value,
+        dateDebut: document.getElementById('dateDebut').value,
+        dateFin: document.getElementById('dateFin').value,
+        priorite: document.getElementById('priorite').value
+    };
+
+    fetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(taskData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Erreur lors de la modification');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        window.location.href = `/tasks/${data.id}`;
+    })
+    .catch(error => {
+        errorAlert.textContent = error.message;
+        errorAlert.style.display = 'block';
+    });
+}
+</script>
+
+</body>
+</html>

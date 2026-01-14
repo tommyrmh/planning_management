@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Tâches - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-check2-square"></i> Gestion des Tâches</h1>
+        <button class="btn btn-slack-primary" id="createTaskBtn" style="display: none;" onclick="window.location.href='/tasks/new'">
+            <i class="bi bi-plus-circle"></i> Créer une Tâche
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="card-slack mb-4">
+        <h3 class="card-slack-title"><i class="bi bi-funnel"></i> Filtres</h3>
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Projet</label>
+                <select class="form-select" id="filterProject">
+                    <option value="">Tous les projets</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Statut</label>
+                <select class="form-select" id="filterStatus">
+                    <option value="">Tous les statuts</option>
+                    <option value="TODO">À faire</option>
+                    <option value="IN_PROGRESS">En cours</option>
+                    <option value="DONE">Terminé</option>
+                    <option value="BLOCKED">Bloqué</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Assigné à</label>
+                <select class="form-select" id="filterAssignee">
+                    <option value="">Tous les collaborateurs</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <button type="button" class="btn btn-slack-primary w-100" onclick="loadTasks()">
+                    <i class="bi bi-search"></i> Rechercher
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tasks List -->
+    <div class="card-slack">
+        <div id="tasksContainer">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <nav id="paginationNav" style="display: none;">
+            <ul class="pagination justify-content-center mt-4" id="pagination">
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+let currentPage = 0;
+const pageSize = 10;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.replace('/login');
+        return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && (user.role === 'MANAGER' || user.role === 'ADMIN')) {
+        document.getElementById('createTaskBtn').style.display = 'block';
+    }
+
+    loadProjects();
+    loadUsers();
+    loadTasks();
+});
+
+function loadProjects() {
+    const token = localStorage.getItem('token');
+    fetch('/api/projects?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('filterProject');
+        data.content.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.nom;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function loadUsers() {
+    const token = localStorage.getItem('token');
+    fetch('/api/users?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('filterAssignee');
+        data.content.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.firstName} ${user.lastName}`;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function loadTasks(page = 0) {
+    const token = localStorage.getItem('token');
+    const projectId = document.getElementById('filterProject').value;
+    const status = document.getElementById('filterStatus').value;
+    const assigneeId = document.getElementById('filterAssignee').value;
+
+    let url = `/api/tasks?page=${page}&size=${pageSize}&sortBy=createdAt&sortDir=DESC`;
+    if (projectId) url += `&projectId=${projectId}`;
+    if (status) url += `&statut=${status}`;
+    if (assigneeId) url += `&assignedToId=${assigneeId}`;
+
+    fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        currentPage = data.number;
+        displayTasks(data.content);
+        displayPagination(data);
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        document.getElementById('tasksContainer').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> Erreur lors du chargement des tâches
+            </div>
+        `;
+    });
+}
+
+function displayTasks(tasks) {
+    const container = document.getElementById('tasksContainer');
+
+    if (tasks.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                <p class="mt-3">Aucune tâche trouvée</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="table table-hover">';
+    html += '<thead><tr>';
+    html += '<th>Titre</th>';
+    html += '<th>Projet</th>';
+    html += '<th>Priorité</th>';
+    html += '<th>Statut</th>';
+    html += '<th>Assigné à</th>';
+    html += '<th>Date début</th>';
+    html += '<th>Date fin</th>';
+    html += '<th>Actions</th>';
+    html += '</tr></thead><tbody>';
+
+    tasks.forEach(task => {
+        const priorityBadge = getPriorityBadge(task.priorite);
+        const statusBadge = getStatusBadge(task.statut);
+        const assigneeName = task.assignedToName || 'Non assigné';
+
+        html += `<tr>`;
+        html += `<td><strong>${task.titre}</strong></td>`;
+        html += `<td>${task.projectNom}</td>`;
+        html += `<td>${priorityBadge}</td>`;
+        html += `<td>${statusBadge}</td>`;
+        html += `<td>${assigneeName}</td>`;
+        html += `<td>${formatDate(task.dateDebut)}</td>`;
+        html += `<td>${formatDate(task.dateFin)}</td>`;
+        html += `<td>
+            <a href="/tasks/${task.id}" class="btn btn-sm btn-slack-secondary">
+                <i class="bi bi-eye"></i> Voir
+            </a>
+        </td>`;
+        html += `</tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function getPriorityBadge(priority) {
+    const badges = {
+        'LOW': '<span class="badge bg-secondary">Basse</span>',
+        'MEDIUM': '<span class="badge bg-info">Moyenne</span>',
+        'HIGH': '<span class="badge bg-warning">Haute</span>',
+        'URGENT': '<span class="badge bg-danger">Urgente</span>'
+    };
+    return badges[priority] || priority;
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'TODO': '<span class="badge bg-secondary">À faire</span>',
+        'IN_PROGRESS': '<span class="badge bg-primary">En cours</span>',
+        'DONE': '<span class="badge bg-success">Terminé</span>',
+        'BLOCKED': '<span class="badge bg-danger">Bloqué</span>'
+    };
+    return badges[status] || status;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR');
+}
+
+function displayPagination(data) {
+    const nav = document.getElementById('paginationNav');
+    const pagination = document.getElementById('pagination');
+
+    if (data.totalPages <= 1) {
+        nav.style.display = 'none';
+        return;
+    }
+
+    nav.style.display = 'block';
+    let html = '';
+
+    if (data.number > 0) {
+        html += `<li class="page-item">
+            <a class="page-link" href="#" onclick="loadTasks(${data.number - 1}); return false;">Précédent</a>
+        </li>`;
+    }
+
+    for (let i = 0; i < data.totalPages; i++) {
+        html += `<li class="page-item ${i === data.number ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="loadTasks(${i}); return false;">${i + 1}</a>
+        </li>`;
+    }
+
+    if (data.number < data.totalPages - 1) {
+        html += `<li class="page-item">
+            <a class="page-link" href="#" onclick="loadTasks(${data.number + 1}); return false;">Suivant</a>
+        </li>`;
+    }
+
+    pagination.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

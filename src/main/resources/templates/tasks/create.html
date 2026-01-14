@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Créer une Tâche - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-plus-circle"></i> Créer une Tâche</h1>
+        <a href="/tasks" class="btn btn-slack-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-slack">
+                <form id="createTaskForm">
+                    <div class="mb-3">
+                        <label for="titre" class="form-label">Titre <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="titre" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" rows="4"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="projectId" class="form-label">Projet <span class="text-danger">*</span></label>
+                        <select class="form-select" id="projectId" required>
+                            <option value="">Sélectionner un projet</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="dateDebut" class="form-label">Date de début <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="dateDebut" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="dateFin" class="form-label">Date de fin <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="dateFin" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="priorite" class="form-label">Priorité <span class="text-danger">*</span></label>
+                            <select class="form-select" id="priorite" required>
+                                <option value="">Sélectionner une priorité</option>
+                                <option value="LOW">Basse</option>
+                                <option value="MEDIUM">Moyenne</option>
+                                <option value="HIGH">Haute</option>
+                                <option value="URGENT">Urgente</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="statut" class="form-label">Statut <span class="text-danger">*</span></label>
+                            <select class="form-select" id="statut" required>
+                                <option value="TODO">À faire</option>
+                                <option value="IN_PROGRESS">En cours</option>
+                                <option value="DONE">Terminé</option>
+                                <option value="BLOCKED">Bloqué</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="errorAlert" class="alert alert-danger" style="display: none;"></div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-slack-primary">
+                            <i class="bi bi-check-circle"></i> Créer la Tâche
+                        </button>
+                        <a href="/tasks" class="btn btn-slack-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.replace('/login');
+        return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && user.role !== 'MANAGER' && user.role !== 'ADMIN') {
+        window.location.replace('/tasks');
+        return;
+    }
+
+    loadProjects();
+
+    document.getElementById('createTaskForm').addEventListener('submit', handleSubmit);
+});
+
+function loadProjects() {
+    const token = localStorage.getItem('token');
+    fetch('/api/projects?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('projectId');
+        data.content.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.nom;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function handleSubmit(e) {
+    e.preventDefault();
+
+    const token = localStorage.getItem('token');
+    const errorAlert = document.getElementById('errorAlert');
+    errorAlert.style.display = 'none';
+
+    const taskData = {
+        titre: document.getElementById('titre').value,
+        description: document.getElementById('description').value,
+        projectId: parseInt(document.getElementById('projectId').value),
+        dateDebut: document.getElementById('dateDebut').value,
+        dateFin: document.getElementById('dateFin').value,
+        priorite: document.getElementById('priorite').value,
+        statut: document.getElementById('statut').value
+    };
+
+    fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(taskData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Erreur lors de la création');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        window.location.href = `/tasks/${data.id}`;
+    })
+    .catch(error => {
+        errorAlert.textContent = error.message;
+        errorAlert.style.display = 'block';
+    });
+}
+</script>
+
+</body>
+</html>

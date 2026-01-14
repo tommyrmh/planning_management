@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/login", "/register", "/error").permitAll()
                         .requestMatchers("/dashboard", "/profile", "/profile/**").permitAll()
                         .requestMatchers("/projects", "/projects/board", "/projects/**").permitAll()
+                        .requestMatchers("/tasks", "/tasks/**").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/register").hasRole("ADMIN")
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
