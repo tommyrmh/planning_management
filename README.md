@@ -75,6 +75,54 @@ Trois rôles disponibles :
   - Validation des données
   - Vérification de l'unicité de l'email
 
+### 2. Gestion des Projets (CRUD) ✅
+
+#### Créer un Projet (MANAGER/ADMIN)
+- Endpoint : `POST /api/projects`
+- **Nécessite rôle MANAGER ou ADMIN**
+- Champs : nom, description, client, dateDebut, dateFin, statut
+- Validation : date de fin après date de début
+- Interface web accessible via `/projects/new`
+
+#### Lister les Projets avec Filtres et Pagination
+- Endpoint : `GET /api/projects`
+- Filtres disponibles : statut, période (startDate, endDate)
+- Pagination : page, size, sortBy, direction
+- Accessible à tous les utilisateurs authentifiés
+- Interface web accessible via `/projects`
+
+#### Consulter le Détail d'un Projet
+- Endpoint : `GET /api/projects/{id}`
+- Affichage de toutes les informations du projet
+- Section tâches associées (prête pour future implémentation)
+- Interface web accessible via `/projects/{id}`
+
+#### Modifier un Projet (MANAGER/ADMIN)
+- Endpoint : `PUT /api/projects/{id}`
+- **Nécessite rôle MANAGER ou ADMIN**
+- Modification de tous les champs du projet
+- Validation des dates
+- Interface web accessible via `/projects/{id}/edit`
+
+#### Supprimer un Projet (ADMIN)
+- Endpoint : `DELETE /api/projects/{id}`
+- **Nécessite rôle ADMIN uniquement**
+- Vérification des tâches associées (à implémenter)
+- Confirmation requise avant suppression
+
+#### Clôturer un Projet (MANAGER/ADMIN)
+- Endpoint : `PUT /api/projects/{id}/close`
+- **Nécessite rôle MANAGER ou ADMIN**
+- Change le statut à TERMINE
+- Enregistre la date de clôture
+
+#### Statuts de Projet
+- **EN_PREPARATION** - Projet en préparation
+- **EN_COURS** - Projet en cours
+- **EN_PAUSE** - Projet en pause
+- **TERMINE** - Projet terminé
+- **ANNULE** - Projet annulé
+
 ## Prérequis
 
 - Java 17 ou supérieur
@@ -136,17 +184,27 @@ server.port=8080
 - **Endpoints publics :**
   - `/api/auth/login` - Connexion accessible à tous
   - Pages statiques (CSS, JS, images)
+  - Pages web : `/`, `/login`, `/dashboard`, `/projects/**`, `/profile/**`
 
 - **Endpoints protégés (JWT requis) :**
   - `/api/profile` - Gestion du profil utilisateur
-  - Tous les autres endpoints API
+  - `/api/projects` (GET) - Liste des projets
+  - `/api/projects/{id}` (GET) - Détail d'un projet
+  - Tous les autres endpoints API nécessitent authentification
+
+- **Endpoints Manager/Admin uniquement :**
+  - `/api/projects` (POST) - Création de projet
+  - `/api/projects/{id}` (PUT) - Modification de projet
+  - `/api/projects/{id}/close` (PUT) - Clôture de projet
 
 - **Endpoints Admin uniquement :**
   - `/api/auth/register` - Création d'utilisateurs (rôle ADMIN requis)
+  - `/api/projects/{id}` (DELETE) - Suppression de projet
   - `/register` - Page de création d'utilisateurs
 
 - Le token JWT doit être passé dans le header `Authorization: Bearer <token>`
 - Les interfaces web gèrent automatiquement l'authentification via localStorage
+- Les boutons d'action sont affichés/cachés selon le rôle de l'utilisateur
 
 ## Démarrage
 
@@ -155,6 +213,24 @@ mvn spring-boot:run
 ```
 
 L'application démarre sur `http://localhost:8080`
+
+## 🌐 Pages Web Disponibles
+
+### Pages Publiques
+- `http://localhost:8080/` - Redirection vers login
+- `http://localhost:8080/login` - Page de connexion
+
+### Pages Authentifiées
+- `http://localhost:8080/dashboard` - Tableau de bord principal
+- `http://localhost:8080/profile` - Consultation du profil
+- `http://localhost:8080/profile/edit` - Modification du profil
+- `http://localhost:8080/projects` - Liste des projets avec filtres
+- `http://localhost:8080/projects/new` - Créer un projet (Manager/Admin)
+- `http://localhost:8080/projects/{id}` - Détail d'un projet
+- `http://localhost:8080/projects/{id}/edit` - Modifier un projet (Manager/Admin)
+
+### Pages Admin
+- `http://localhost:8080/register` - Création d'utilisateurs (Admin uniquement)
 
 ## 🔐 Compte Admin par Défaut
 
@@ -298,6 +374,185 @@ Content-Type: application/json
 }
 ```
 
+### Projets
+
+#### Créer un Projet (Manager/Admin uniquement)
+```http
+POST /api/projects
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "nom": "Projet Website",
+  "description": "Refonte du site web corporate",
+  "client": "Acme Corporation",
+  "dateDebut": "2026-02-01",
+  "dateFin": "2026-06-30",
+  "statut": "EN_PREPARATION"
+}
+```
+
+⚠️ **Note:** Cet endpoint nécessite un token JWT d'un utilisateur avec le rôle MANAGER ou ADMIN.
+
+**Réponse (201 Created)** :
+```json
+{
+  "id": 1,
+  "nom": "Projet Website",
+  "description": "Refonte du site web corporate",
+  "client": "Acme Corporation",
+  "dateDebut": "2026-02-01",
+  "dateFin": "2026-06-30",
+  "statut": "EN_PREPARATION",
+  "createdByUsername": "admin",
+  "createdAt": "2026-01-14T10:30:00",
+  "updatedAt": "2026-01-14T10:30:00",
+  "closedAt": null
+}
+```
+
+#### Lister tous les Projets avec Filtres
+```http
+GET /api/projects?statut=EN_COURS&startDate=2026-01-01&endDate=2026-12-31&page=0&size=10&sortBy=dateDebut&direction=DESC
+Authorization: Bearer <token>
+```
+
+**Paramètres de requête** :
+- `statut` (optionnel) : EN_PREPARATION, EN_COURS, EN_PAUSE, TERMINE, ANNULE
+- `startDate` (optionnel) : Date de début au format ISO (YYYY-MM-DD)
+- `endDate` (optionnel) : Date de fin au format ISO (YYYY-MM-DD)
+- `page` (défaut: 0) : Numéro de la page
+- `size` (défaut: 10) : Nombre d'éléments par page
+- `sortBy` (défaut: id) : Champ de tri
+- `direction` (défaut: DESC) : ASC ou DESC
+
+**Réponse (200 OK)** :
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "nom": "Projet Website",
+      "description": "Refonte du site web corporate",
+      "client": "Acme Corporation",
+      "dateDebut": "2026-02-01",
+      "dateFin": "2026-06-30",
+      "statut": "EN_COURS",
+      "createdByUsername": "admin",
+      "createdAt": "2026-01-14T10:30:00",
+      "updatedAt": "2026-01-14T10:30:00",
+      "closedAt": null
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 10
+  },
+  "totalPages": 1,
+  "totalElements": 1,
+  "last": true,
+  "first": true
+}
+```
+
+#### Consulter un Projet
+```http
+GET /api/projects/1
+Authorization: Bearer <token>
+```
+
+**Réponse (200 OK)** :
+```json
+{
+  "id": 1,
+  "nom": "Projet Website",
+  "description": "Refonte du site web corporate",
+  "client": "Acme Corporation",
+  "dateDebut": "2026-02-01",
+  "dateFin": "2026-06-30",
+  "statut": "EN_COURS",
+  "createdByUsername": "admin",
+  "createdAt": "2026-01-14T10:30:00",
+  "updatedAt": "2026-01-14T10:30:00",
+  "closedAt": null
+}
+```
+
+#### Modifier un Projet (Manager/Admin uniquement)
+```http
+PUT /api/projects/1
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "nom": "Projet Website - Phase 2",
+  "description": "Refonte du site web corporate avec module e-commerce",
+  "client": "Acme Corporation",
+  "dateDebut": "2026-02-01",
+  "dateFin": "2026-08-31",
+  "statut": "EN_COURS"
+}
+```
+
+**Réponse (200 OK)** :
+```json
+{
+  "id": 1,
+  "nom": "Projet Website - Phase 2",
+  "description": "Refonte du site web corporate avec module e-commerce",
+  "client": "Acme Corporation",
+  "dateDebut": "2026-02-01",
+  "dateFin": "2026-08-31",
+  "statut": "EN_COURS",
+  "createdByUsername": "admin",
+  "createdAt": "2026-01-14T10:30:00",
+  "updatedAt": "2026-01-14T15:45:00",
+  "closedAt": null
+}
+```
+
+#### Clôturer un Projet (Manager/Admin uniquement)
+```http
+PUT /api/projects/1/close
+Authorization: Bearer <token>
+```
+
+**Réponse (200 OK)** :
+```json
+{
+  "id": 1,
+  "nom": "Projet Website",
+  "description": "Refonte du site web corporate",
+  "client": "Acme Corporation",
+  "dateDebut": "2026-02-01",
+  "dateFin": "2026-06-30",
+  "statut": "TERMINE",
+  "createdByUsername": "admin",
+  "createdAt": "2026-01-14T10:30:00",
+  "updatedAt": "2026-01-14T16:00:00",
+  "closedAt": "2026-01-14T16:00:00"
+}
+```
+
+#### Supprimer un Projet (Admin uniquement)
+```http
+DELETE /api/projects/1
+Authorization: Bearer <token>
+```
+
+**Réponse (204 No Content)** : Aucun contenu retourné
+
+#### Compter les Projets par Statut
+```http
+GET /api/projects/stats/count?statut=EN_COURS
+Authorization: Bearer <token>
+```
+
+**Réponse (200 OK)** :
+```json
+5
+```
+
 ### Gestion des Erreurs
 
 #### Erreurs de Validation (400 Bad Request)
@@ -355,18 +610,24 @@ src/main/java/com/gestion/planning/
 │
 ├── controller/
 │   ├── AuthController.java         # Endpoints d'authentification
-│   └── ProfileController.java      # Endpoints de gestion de profil
+│   ├── ProfileController.java      # Endpoints de gestion de profil
+│   ├── ProjectController.java      # Endpoints de gestion des projets
+│   └── ViewController.java         # Contrôleur pour les pages Thymeleaf
 │
 ├── service/
 │   ├── AuthService.java           # Logique d'authentification
-│   └── UserService.java           # Logique de gestion des utilisateurs
+│   ├── UserService.java           # Logique de gestion des utilisateurs
+│   └── ProjectService.java        # Logique de gestion des projets
 │
 ├── repository/
-│   └── UserRepository.java        # Accès aux données utilisateur
+│   ├── UserRepository.java        # Accès aux données utilisateur
+│   └── ProjectRepository.java     # Accès aux données projets (avec filtres)
 │
 ├── model/
 │   ├── User.java                  # Entité User
-│   └── Role.java                  # Énumération des rôles
+│   ├── Role.java                  # Énumération des rôles
+│   ├── Project.java               # Entité Project
+│   └── ProjectStatus.java         # Énumération des statuts de projet
 │
 ├── dto/
 │   ├── RegisterRequest.java       # DTO pour l'inscription
@@ -374,6 +635,9 @@ src/main/java/com/gestion/planning/
 │   ├── LoginResponse.java         # DTO pour la réponse de connexion
 │   ├── ProfileResponse.java       # DTO pour le profil
 │   ├── UpdateProfileRequest.java  # DTO pour la mise à jour du profil
+│   ├── CreateProjectRequest.java  # DTO pour créer un projet
+│   ├── UpdateProjectRequest.java  # DTO pour modifier un projet
+│   ├── ProjectResponse.java       # DTO pour les projets
 │   └── ErrorResponse.java         # DTO pour les erreurs
 │
 ├── security/
@@ -387,8 +651,82 @@ src/main/java/com/gestion/planning/
 │   ├── ResourceAlreadyExistsException.java   # Exception ressource existante
 │   └── GlobalExceptionHandler.java           # Gestionnaire global d'exceptions
 │
+├── config/
+│   └── DataInitializer.java       # Initialisation des données (admin par défaut)
+│
 └── PlanningApplication.java        # Classe principale
 ```
+
+```
+src/main/resources/
+│
+├── templates/
+│   ├── fragments/
+│   │   └── layout.html             # Navbar et layout commun
+│   ├── auth/
+│   │   ├── login.html              # Page de connexion
+│   │   └── register.html           # Page d'inscription (admin)
+│   ├── profile/
+│   │   ├── view.html               # Page de consultation du profil
+│   │   └── edit.html               # Page de modification du profil
+│   ├── projects/
+│   │   ├── list.html               # Liste des projets avec filtres
+│   │   ├── create.html             # Formulaire de création de projet
+│   │   ├── detail.html             # Détail d'un projet
+│   │   └── edit.html               # Formulaire de modification de projet
+│   └── dashboard.html              # Page d'accueil après connexion
+│
+├── static/
+│   ├── css/
+│   │   └── slack-theme.css         # Thème Slack personnalisé
+│   └── js/
+│       └── app.js                  # Fonctions JavaScript (auth, logout)
+│
+└── application.properties          # Configuration de l'application
+```
+
+## Interface Web
+
+L'application dispose d'une interface web complète construite avec Thymeleaf et Bootstrap 5, inspirée du design de Slack.
+
+### Thème Slack Personnalisé
+
+Le thème utilise une palette de couleurs inspirée de Slack :
+- **Couleur principale** : Violet aubergine (#4A154B)
+- **Couleur secondaire** : Vert (#2EB67D)
+- **Couleur d'accent** : Orange (#E01E5A)
+- Design moderne et responsive
+- Navigation intuitive avec sidebar
+- Formulaires stylisés
+- Badges de statut colorés
+
+### Fonctionnalités Frontend
+
+**Authentification** :
+- Login automatique avec redirection si déjà connecté
+- Stockage du token JWT dans localStorage
+- Déconnexion avec nettoyage de l'historique
+- Protection des pages : redirection si non authentifié
+
+**Gestion des Projets** :
+- Liste interactive avec filtres (statut, dates)
+- Pagination complète
+- Création de projet avec validation en temps réel
+- Modification de projet avec données pré-remplies
+- Détail de projet avec actions selon le rôle
+- Confirmation avant suppression (modal)
+- Clôture de projet en un clic
+
+**Permissions Dynamiques** :
+- Affichage/masquage des boutons selon le rôle utilisateur
+- Vérification côté client avant les actions sensibles
+- Messages d'erreur clairs et informatifs
+
+**Navigation** :
+- Navbar responsive avec dropdown utilisateur
+- Liens actifs selon la page courante
+- Icônes Bootstrap pour une meilleure UX
+- Footer avec informations de copyright
 
 ## Bonnes Pratiques Implémentées
 
@@ -409,29 +747,49 @@ src/main/java/com/gestion/planning/
 - ✅ Respect des conventions de nommage Java
 - ✅ Gestion propre des erreurs avec exceptions personnalisées
 - ✅ Validation des entrées utilisateur
+- ✅ Builder pattern pour les entités
+- ✅ Transactions avec @Transactional
+- ✅ Pagination et filtrage optimisés avec Spring Data
+
+### Frontend
+- ✅ Thème cohérent inspiré de Slack
+- ✅ Validation côté client et côté serveur
+- ✅ Gestion d'erreurs avec messages informatifs
+- ✅ Protection des pages avec vérification JWT
+- ✅ Interface responsive (mobile-first)
+- ✅ Composants réutilisables (fragments Thymeleaf)
 
 ## Prochaines Étapes
 
 Les fonctionnalités suivantes sont à implémenter :
 
-2. **Gestion du Planning**
+3. **Gestion des Tâches**
+   - Créer des tâches associées aux projets
+   - Assigner des tâches aux collaborateurs
+   - Suivre l'avancement des tâches
+   - Gérer les dépendances entre tâches
+
+4. **Gestion du Planning**
    - Créer/modifier des événements
    - Affichage calendrier
    - Gestion des récurrences
+   - Planification des tâches
 
-3. **Gestion de la Disponibilité**
+5. **Gestion de la Disponibilité**
    - Déclarer ses disponibilités
    - Consulter les disponibilités de l'équipe
    - Gestion des conflits
+   - Validation des affectations
 
-4. **Système de Notifications**
+6. **Système de Notifications**
    - Notifications en temps réel
    - Alertes de conflits
+   - Rappels de deadlines
 
-5. **Interface Web**
-   - Pages Thymeleaf
+7. **Amélioration de l'Interface Web**
    - Calendrier interactif
-   - Dashboard
+   - Dashboard avec statistiques
+   - Graphiques de suivi de projets
 
 ## Auteur
 
