@@ -728,73 +728,9 @@ Le thème utilise une palette de couleurs inspirée de Slack :
 - Icônes Bootstrap pour une meilleure UX
 - Footer avec informations de copyright
 
-## Bonnes Pratiques Implémentées
-
-### Architecture
-- ✅ Séparation claire des responsabilités (Controller, Service, Repository)
-- ✅ Utilisation des DTOs pour découpler les entités de l'API
-- ✅ Gestion centralisée des exceptions
-
-### Sécurité
-- ✅ Authentification JWT stateless
-- ✅ Hashage des mots de passe avec BCrypt
-- ✅ Validation des données avec Bean Validation
-- ✅ Protection CSRF désactivée (API REST stateless)
-- ✅ Sessions désactivées (SessionCreationPolicy.STATELESS)
-
-### Code Quality
-- ✅ Utilisation de Lombok pour réduire le code boilerplate
-- ✅ Respect des conventions de nommage Java
-- ✅ Gestion propre des erreurs avec exceptions personnalisées
-- ✅ Validation des entrées utilisateur
-- ✅ Builder pattern pour les entités
-- ✅ Transactions avec @Transactional
-- ✅ Pagination et filtrage optimisés avec Spring Data
-
-### Frontend
-- ✅ Thème cohérent inspiré de Slack
-- ✅ Validation côté client et côté serveur
-- ✅ Gestion d'erreurs avec messages informatifs
-- ✅ Protection des pages avec vérification JWT
-- ✅ Interface responsive (mobile-first)
-- ✅ Composants réutilisables (fragments Thymeleaf)
-
-## Prochaines Étapes
-
-Les fonctionnalités suivantes sont à implémenter :
-
-3. **Gestion des Tâches**
-   - Créer des tâches associées aux projets
-   - Assigner des tâches aux collaborateurs
-   - Suivre l'avancement des tâches
-   - Gérer les dépendances entre tâches
-
-4. **Gestion du Planning**
-   - Créer/modifier des événements
-   - Affichage calendrier
-   - Gestion des récurrences
-   - Planification des tâches
-
-5. **Gestion de la Disponibilité**
-   - Déclarer ses disponibilités
-   - Consulter les disponibilités de l'équipe
-   - Gestion des conflits
-   - Validation des affectations
-
-6. **Système de Notifications**
-   - Notifications en temps réel
-   - Alertes de conflits
-   - Rappels de deadlines
-
-7. **Amélioration de l'Interface Web**
-   - Calendrier interactif
-   - Dashboard avec statistiques
-   - Graphiques de suivi de projets
 
 ## Auteur
+Tommy RAMIHOATRARIVO
 
 Projet développé dans le cadre d'un test technique de recrutement.
 
-## Licence
-
-Ce projet est sous licence privée.
