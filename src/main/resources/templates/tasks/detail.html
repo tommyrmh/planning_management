@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Détail Tâche - Planning Management</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: navbar}"></div>
+
+<div class="main-container">
+    <div class="page-header">
+        <h1><i class="bi bi-check2-square"></i> Détail de la Tâche</h1>
+        <div>
+            <a href="/tasks" class="btn btn-slack-secondary">
+                <i class="bi bi-arrow-left"></i> Retour à la liste
+            </a>
+            <button class="btn btn-slack-primary" id="editBtn" style="display: none;" onclick="editTask()">
+                <i class="bi bi-pencil"></i> Modifier
+            </button>
+            <button class="btn btn-danger" id="deleteBtn" style="display: none;" onclick="deleteTask()">
+                <i class="bi bi-trash"></i> Supprimer
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card-slack" id="taskDetails">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Status Actions -->
+            <div class="card-slack mb-3">
+                <h3 class="card-slack-title"><i class="bi bi-gear"></i> Changer le Statut</h3>
+                <div class="d-grid gap-2" id="statusActions">
+                    <button class="btn btn-secondary" onclick="changeStatus('TODO')">
+                        <i class="bi bi-circle"></i> À faire
+                    </button>
+                    <button class="btn btn-primary" onclick="changeStatus('IN_PROGRESS')">
+                        <i class="bi bi-arrow-repeat"></i> En cours
+                    </button>
+                    <button class="btn btn-success" onclick="changeStatus('DONE')">
+                        <i class="bi bi-check-circle"></i> Terminé
+                    </button>
+                    <button class="btn btn-danger" onclick="changeStatus('BLOCKED')">
+                        <i class="bi bi-x-circle"></i> Bloqué
+                    </button>
+                </div>
+            </div>
+
+            <!-- Assign/Reassign -->
+            <div class="card-slack" id="assignSection" style="display: none;">
+                <h3 class="card-slack-title"><i class="bi bi-person-plus"></i> Assigner / Réassigner</h3>
+                <form id="assignForm">
+                    <div class="mb-3">
+                        <label for="assignUserId" class="form-label">Collaborateur</label>
+                        <select class="form-select" id="assignUserId" required>
+                            <option value="">Sélectionner un collaborateur</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-slack-primary w-100">
+                        <i class="bi bi-check"></i> Assigner
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+let taskId;
+let currentTask;
+let currentUser;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.replace('/login');
+        return;
+    }
+
+    currentUser = JSON.parse(localStorage.getItem('user'));
+    taskId = window.location.pathname.split('/').pop();
+
+    loadTask();
+    loadUsers();
+});
+
+function loadTask() {
+    const token = localStorage.getItem('token');
+
+    fetch(`/api/tasks/${taskId}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Tâche non trouvée');
+        return response.json();
+    })
+    .then(task => {
+        currentTask = task;
+        displayTask(task);
+        updatePermissions();
+    })
+    .catch(error => {
+        document.getElementById('taskDetails').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> ${error.message}
+            </div>
+        `;
+    });
+}
+
+function displayTask(task) {
+    const priorityBadge = getPriorityBadge(task.priorite);
+    const statusBadge = getStatusBadge(task.statut);
+    const assigneeName = task.assignedToName || '<span class="text-muted">Non assigné</span>';
+
+    const html = `
+        <h2 class="card-slack-title">${task.titre}</h2>
+
+        <div class="mb-3">
+            <strong>Projet:</strong> ${task.projectNom}
+        </div>
+
+        <div class="mb-3">
+            <strong>Description:</strong>
+            <p>${task.description || '<span class="text-muted">Aucune description</span>'}</p>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Date de début:</strong> ${formatDate(task.dateDebut)}
+            </div>
+            <div class="col-md-6">
+                <strong>Date de fin:</strong> ${formatDate(task.dateFin)}
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Priorité:</strong> ${priorityBadge}
+            </div>
+            <div class="col-md-6">
+                <strong>Statut:</strong> ${statusBadge}
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <strong>Assigné à:</strong> ${assigneeName}
+        </div>
+
+        <div class="mb-3">
+            <strong>Créé par:</strong> ${task.createdByName}
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <small class="text-muted">Créé le: ${formatDateTime(task.createdAt)}</small>
+            </div>
+            <div class="col-md-6">
+                <small class="text-muted">Modifié le: ${formatDateTime(task.updatedAt)}</small>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('taskDetails').innerHTML = html;
+}
+
+function updatePermissions() {
+    const isManager = currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN';
+    const isAdmin = currentUser.role === 'ADMIN';
+    const isAssigned = currentTask.assignedToId === currentUser.id;
+
+    if (isManager) {
+        document.getElementById('editBtn').style.display = 'inline-block';
+        document.getElementById('assignSection').style.display = 'block';
+    }
+
+    if (isAdmin) {
+        document.getElementById('deleteBtn').style.display = 'inline-block';
+    }
+
+    if (isManager || isAssigned) {
+        document.getElementById('assignForm').addEventListener('submit', handleAssign);
+    }
+}
+
+function loadUsers() {
+    const token = localStorage.getItem('token');
+    fetch('/api/users?size=100', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const select = document.getElementById('assignUserId');
+        data.content.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.firstName} ${user.lastName}`;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Erreur:', error));
+}
+
+function changeStatus(newStatus) {
+    const token = localStorage.getItem('token');
+
+    if (!confirm(`Voulez-vous vraiment changer le statut à "${getStatusLabel(newStatus)}" ?`)) {
+        return;
+    }
+
+    fetch(`/api/tasks/${taskId}/status?status=${newStatus}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erreur lors du changement de statut');
+        return response.json();
+    })
+    .then(() => {
+        loadTask();
+        alert('Statut modifié avec succès');
+    })
+    .catch(error => alert(error.message));
+}
+
+function handleAssign(e) {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    const userId = document.getElementById('assignUserId').value;
+
+    const isManager = currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN';
+    const endpoint = isManager ? `/api/tasks/${taskId}/assign` : `/api/tasks/${taskId}/reassign`;
+
+    fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ userId: parseInt(userId) })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erreur lors de l\'assignation');
+        return response.json();
+    })
+    .then(() => {
+        loadTask();
+        alert('Tâche assignée avec succès');
+    })
+    .catch(error => alert(error.message));
+}
+
+function editTask() {
+    window.location.href = `/tasks/${taskId}/edit`;
+}
+
+function deleteTask() {
+    if (!confirm('Voulez-vous vraiment supprimer cette tâche ?')) {
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+
+    fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erreur lors de la suppression');
+        alert('Tâche supprimée avec succès');
+        window.location.href = '/tasks';
+    })
+    .catch(error => alert(error.message));
+}
+
+function getPriorityBadge(priority) {
+    const badges = {
+        'LOW': '<span class="badge bg-secondary">Basse</span>',
+        'MEDIUM': '<span class="badge bg-info">Moyenne</span>',
+        'HIGH': '<span class="badge bg-warning">Haute</span>',
+        'URGENT': '<span class="badge bg-danger">Urgente</span>'
+    };
+    return badges[priority] || priority;
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'TODO': '<span class="badge bg-secondary">À faire</span>',
+        'IN_PROGRESS': '<span class="badge bg-primary">En cours</span>',
+        'DONE': '<span class="badge bg-success">Terminé</span>',
+        'BLOCKED': '<span class="badge bg-danger">Bloqué</span>'
+    };
+    return badges[status] || status;
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        'TODO': 'À faire',
+        'IN_PROGRESS': 'En cours',
+        'DONE': 'Terminé',
+        'BLOCKED': 'Bloqué'
+    };
+    return labels[status] || status;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR');
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('fr-FR');
+}
+</script>
+
+</body>
+</html>

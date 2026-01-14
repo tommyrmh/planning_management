@@ -52,6 +52,23 @@
                         </li>
                     </ul>
                 </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="tasksDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-check2-square"></i> Tâches
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" th:href="@{/tasks}">
+                                <i class="bi bi-list"></i> Vue Liste
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" th:href="@{/tasks/board}">
+                                <i class="bi bi-columns"></i> Vue Board
+                            </a>
+                        </li>
+                    </ul>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/planning}">
                         <i class="bi bi-calendar3"></i> Planning

@@ -60,4 +60,29 @@ public class ViewController {
     public String editProject() {
         return "projects/edit";
     }
+
+    @GetMapping("/tasks")
+    public String tasks() {
+        return "tasks/list";
+    }
+
+    @GetMapping("/tasks/board")
+    public String tasksBoard() {
+        return "tasks/board";
+    }
+
+    @GetMapping("/tasks/new")
+    public String newTask() {
+        return "tasks/create";
+    }
+
+    @GetMapping("/tasks/{id}")
+    public String taskDetail() {
+        return "tasks/detail";
+    }
+
+    @GetMapping("/tasks/{id}/edit")
+    public String editTask() {
+        return "tasks/edit";
+    }
 }
