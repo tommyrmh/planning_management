@@ -89,7 +89,8 @@ Trois rôles disponibles :
 - Filtres disponibles : statut, période (startDate, endDate)
 - Pagination : page, size, sortBy, direction
 - Accessible à tous les utilisateurs authentifiés
-- Interface web accessible via `/projects`
+- **Vue Liste** : Interface web accessible via `/projects`
+- **Vue Kanban** : Tableau style Jira accessible via `/projects/board`
 
 #### Consulter le Détail d'un Projet
 - Endpoint : `GET /api/projects/{id}`
@@ -122,6 +123,23 @@ Trois rôles disponibles :
 - **EN_PAUSE** - Projet en pause
 - **TERMINE** - Projet terminé
 - **ANNULE** - Projet annulé
+
+#### Vue Kanban (Style Jira)
+- Interface web accessible via `/projects/board`
+- **Tableau avec 5 colonnes** correspondant aux statuts
+- **Drag & Drop** : Glissez-déposez les cartes entre colonnes pour changer le statut
+- **Permissions** : Seuls MANAGER et ADMIN peuvent déplacer les cartes
+- **Cartes interactives** affichant :
+  - Nom du projet
+  - Client
+  - Dates de début et fin
+  - Description (tronquée)
+  - Créateur du projet
+- **Compteurs** : Badge affichant le nombre de projets par colonne
+- **Basculement de vue** : Passage facile entre Vue Liste et Vue Kanban
+- Clic sur une carte pour voir les détails du projet
+- Mise à jour en temps réel via l'API REST
+- Design responsive avec colonnes scrollables
 
 ## Prérequis
 
@@ -225,6 +243,7 @@ L'application démarre sur `http://localhost:8080`
 - `http://localhost:8080/profile` - Consultation du profil
 - `http://localhost:8080/profile/edit` - Modification du profil
 - `http://localhost:8080/projects` - Liste des projets avec filtres
+- `http://localhost:8080/projects/board` - Vue Kanban des projets (Drag & Drop)
 - `http://localhost:8080/projects/new` - Créer un projet (Manager/Admin)
 - `http://localhost:8080/projects/{id}` - Détail d'un projet
 - `http://localhost:8080/projects/{id}/edit` - Modifier un projet (Manager/Admin)
@@ -671,6 +690,7 @@ src/main/resources/
 │   │   └── edit.html               # Page de modification du profil
 │   ├── projects/
 │   │   ├── list.html               # Liste des projets avec filtres
+│   │   ├── board.html              # Vue Kanban avec drag & drop
 │   │   ├── create.html             # Formulaire de création de projet
 │   │   ├── detail.html             # Détail d'un projet
 │   │   └── edit.html               # Formulaire de modification de projet
@@ -709,13 +729,17 @@ Le thème utilise une palette de couleurs inspirée de Slack :
 - Protection des pages : redirection si non authentifié
 
 **Gestion des Projets** :
-- Liste interactive avec filtres (statut, dates)
-- Pagination complète
+- **Vue Liste** : Liste interactive avec filtres (statut, dates) et pagination complète
+- **Vue Kanban** : Tableau style Jira avec drag & drop pour changer les statuts
+- Basculement facile entre les deux vues
 - Création de projet avec validation en temps réel
 - Modification de projet avec données pré-remplies
 - Détail de projet avec actions selon le rôle
 - Confirmation avant suppression (modal)
 - Clôture de projet en un clic
+- Drag & Drop pour changer le statut (Manager/Admin uniquement)
+- Compteurs de projets par statut
+- Cartes interactives avec toutes les informations clés
 
 **Permissions Dynamiques** :
 - Affichage/masquage des boutons selon le rôle utilisateur
@@ -787,6 +811,7 @@ Les fonctionnalités suivantes sont à implémenter :
    - Rappels de deadlines
 
 7. **Amélioration de l'Interface Web**
+   - ~~Tableau Kanban pour les projets~~ ✅ (Implémenté)
    - Calendrier interactif
    - Dashboard avec statistiques
    - Graphiques de suivi de projets
