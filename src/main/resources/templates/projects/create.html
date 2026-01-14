@@ -108,7 +108,7 @@
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Création...';
 
             try {
-                const token = localStorage.getItem('jwt_token');
+                const token = getAuthToken();
                 if (!token) {
                     window.location.href = '/login';
                     return;
@@ -138,8 +138,7 @@
                 });
 
                 if (response.status === 401) {
-                    localStorage.removeItem('jwt_token');
-                    window.location.href = '/login';
+                    logout();
                     return;
                 }
 
@@ -149,7 +148,9 @@
                     throw new Error(data.message || 'Erreur lors de la création du projet');
                 }
 
-                // Succès - rediriger vers la page de détail
+                // Succès - afficher notification et rediriger
+                localStorage.setItem('projectMessage', 'Projet créé avec succès !');
+                localStorage.setItem('projectMessageType', 'success');
                 window.location.href = `/projects/${data.id}`;
             } catch (error) {
                 console.error('Erreur:', error);

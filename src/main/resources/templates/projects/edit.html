@@ -131,7 +131,7 @@
 
         async function loadProjectData(id) {
             try {
-                const token = localStorage.getItem('jwt_token');
+                const token = getAuthToken();
                 if (!token) {
                     window.location.href = '/login';
                     return;
@@ -145,8 +145,7 @@
                 });
 
                 if (response.status === 401) {
-                    localStorage.removeItem('jwt_token');
-                    window.location.href = '/login';
+                    logout();
                     return;
                 }
 
@@ -184,7 +183,7 @@
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enregistrement...';
 
             try {
-                const token = localStorage.getItem('jwt_token');
+                const token = getAuthToken();
                 if (!token) {
                     window.location.href = '/login';
                     return;
@@ -214,8 +213,7 @@
                 });
 
                 if (response.status === 401) {
-                    localStorage.removeItem('jwt_token');
-                    window.location.href = '/login';
+                    logout();
                     return;
                 }
 
@@ -225,7 +223,9 @@
                     throw new Error(data.message || 'Erreur lors de la modification du projet');
                 }
 
-                // Succès - rediriger vers la page de détail
+                // Succès - afficher notification et rediriger
+                localStorage.setItem('projectMessage', 'Projet modifié avec succès');
+                localStorage.setItem('projectMessageType', 'success');
                 window.location.href = `/projects/${projectId}`;
             } catch (error) {
                 console.error('Erreur:', error);

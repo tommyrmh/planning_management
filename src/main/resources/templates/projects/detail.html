@@ -157,6 +157,15 @@
         document.addEventListener('DOMContentLoaded', async function() {
             deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
+            // Afficher message si présent
+            const message = localStorage.getItem('projectMessage');
+            const messageType = localStorage.getItem('projectMessageType');
+            if (message) {
+                showToast(message, messageType || 'info');
+                localStorage.removeItem('projectMessage');
+                localStorage.removeItem('projectMessageType');
+            }
+
             // Récupérer l'ID du projet depuis l'URL
             const pathParts = window.location.pathname.split('/');
             const projectId = pathParts[pathParts.length - 1];
@@ -187,7 +196,7 @@
 
         async function loadProjectDetails(projectId) {
             try {
-                const token = localStorage.getItem('jwt_token');
+                const token = getAuthToken();
                 if (!token) {
                     window.location.href = '/login';
                     return;
@@ -201,8 +210,7 @@
                 });
 
                 if (response.status === 401) {
-                    localStorage.removeItem('jwt_token');
-                    window.location.href = '/login';
+                    logout();
                     return;
                 }
 
@@ -271,7 +279,7 @@
 
         async function deleteProject(projectId) {
             try {
-                const token = localStorage.getItem('jwt_token');
+                const token = getAuthToken();
                 const response = await fetch(`/api/projects/${projectId}`, {
                     method: 'DELETE',
                     headers: {
@@ -280,8 +288,7 @@
                 });
 
                 if (response.status === 401) {
-                    localStorage.removeItem('jwt_token');
-                    window.location.href = '/login';
+                    logout();
                     return;
                 }
 
@@ -290,7 +297,9 @@
                     throw new Error(data.message || 'Erreur lors de la suppression');
                 }
 
-                // Succès
+                // Succès - afficher notification et rediriger
+                localStorage.setItem('projectMessage', 'Projet supprimé avec succès');
+                localStorage.setItem('projectMessageType', 'success');
                 window.location.href = '/projects';
             } catch (error) {
                 console.error('Erreur:', error);
@@ -301,7 +310,7 @@
 
         async function closeProject(projectId) {
             try {
-                const token = localStorage.getItem('jwt_token');
+                const token = getAuthToken();
                 const response = await fetch(`/api/projects/${projectId}/close`, {
                     method: 'PUT',
                     headers: {
@@ -311,8 +320,7 @@
                 });
 
                 if (response.status === 401) {
-                    localStorage.removeItem('jwt_token');
-                    window.location.href = '/login';
+                    logout();
                     return;
                 }
 
@@ -321,7 +329,9 @@
                     throw new Error(data.message || 'Erreur lors de la clôture');
                 }
 
-                // Recharger la page pour afficher le nouveau statut
+                // Succès - afficher notification et recharger
+                localStorage.setItem('projectMessage', 'Projet clôturé avec succès');
+                localStorage.setItem('projectMessageType', 'success');
                 window.location.reload();
             } catch (error) {
                 console.error('Erreur:', error);

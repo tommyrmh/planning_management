@@ -95,6 +95,15 @@
 
         // Charger les projets au chargement de la page
         document.addEventListener('DOMContentLoaded', function() {
+            // Afficher message si présent
+            const message = localStorage.getItem('projectMessage');
+            const messageType = localStorage.getItem('projectMessageType');
+            if (message) {
+                showToast(message, messageType || 'info');
+                localStorage.removeItem('projectMessage');
+                localStorage.removeItem('projectMessageType');
+            }
+
             loadProjects();
 
             // Bouton créer projet
@@ -125,7 +134,7 @@
 
         async function loadProjects() {
             try {
-                const token = localStorage.getItem('jwt_token');
+                const token = getAuthToken();
                 if (!token) {
                     window.location.href = '/login';
                     return;
@@ -145,8 +154,7 @@
                 });
 
                 if (response.status === 401) {
-                    localStorage.removeItem('jwt_token');
-                    window.location.href = '/login';
+                    logout();
                     return;
                 }
 
