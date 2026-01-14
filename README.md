@@ -390,53 +390,7 @@ src/main/java/com/gestion/planning/
 └── PlanningApplication.java        # Classe principale
 ```
 
-## Bonnes Pratiques Implémentées
-
-### Architecture
-- ✅ Séparation claire des responsabilités (Controller, Service, Repository)
-- ✅ Utilisation des DTOs pour découpler les entités de l'API
-- ✅ Gestion centralisée des exceptions
-
-### Sécurité
-- ✅ Authentification JWT stateless
-- ✅ Hashage des mots de passe avec BCrypt
-- ✅ Validation des données avec Bean Validation
-- ✅ Protection CSRF désactivée (API REST stateless)
-- ✅ Sessions désactivées (SessionCreationPolicy.STATELESS)
-
-### Code Quality
-- ✅ Utilisation de Lombok pour réduire le code boilerplate
-- ✅ Respect des conventions de nommage Java
-- ✅ Gestion propre des erreurs avec exceptions personnalisées
-- ✅ Validation des entrées utilisateur
-
-## Prochaines Étapes
-
-Les fonctionnalités suivantes sont à implémenter :
-
-2. **Gestion du Planning**
-   - Créer/modifier des événements
-   - Affichage calendrier
-   - Gestion des récurrences
-
-3. **Gestion de la Disponibilité**
-   - Déclarer ses disponibilités
-   - Consulter les disponibilités de l'équipe
-   - Gestion des conflits
-
-4. **Système de Notifications**
-   - Notifications en temps réel
-   - Alertes de conflits
-
-5. **Interface Web**
-   - Pages Thymeleaf
-   - Calendrier interactif
-   - Dashboard
-
 ## Auteur
+Tommy RAMIHOATRARIVO
 
 Projet développé dans le cadre d'un test technique de recrutement.
-
-## Licence
-
-Ce projet est sous licence privée.
