@@ -41,4 +41,22 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     long countByStatut(TaskStatus statut);
 
     long countByProjectId(Long projectId);
+
+    // Vérifier les conflits : tâches assignées au même utilisateur sur le même créneau
+    @Query("SELECT t FROM Task t WHERE t.assignedTo.id = :userId " +
+           "AND t.id != :excludeTaskId " +
+           "AND t.statut != 'DONE' " +
+           "AND ((t.dateDebut <= :dateFin AND t.dateFin >= :dateDebut))")
+    List<Task> findConflictingTasks(@Param("userId") Long userId,
+                                     @Param("dateDebut") LocalDate dateDebut,
+                                     @Param("dateFin") LocalDate dateFin,
+                                     @Param("excludeTaskId") Long excludeTaskId);
+
+    // Variante pour nouvelle assignation (sans exclure de tâche)
+    @Query("SELECT t FROM Task t WHERE t.assignedTo.id = :userId " +
+           "AND t.statut != 'DONE' " +
+           "AND ((t.dateDebut <= :dateFin AND t.dateFin >= :dateDebut))")
+    List<Task> findConflictingTasksForUser(@Param("userId") Long userId,
+                                            @Param("dateDebut") LocalDate dateDebut,
+                                            @Param("dateFin") LocalDate dateFin);
 }

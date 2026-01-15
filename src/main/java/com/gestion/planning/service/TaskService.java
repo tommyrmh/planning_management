@@ -2,6 +2,7 @@ package com.gestion.planning.service;
 
 import com.gestion.planning.dto.*;
 import com.gestion.planning.model.*;
+import com.gestion.planning.model.ProjectStatus;
 import com.gestion.planning.repository.ProjectRepository;
 import com.gestion.planning.repository.TaskRepository;
 import com.gestion.planning.repository.UserRepository;
@@ -29,8 +30,22 @@ public class TaskService {
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé"));
 
+        // Règle: Projet TERMINE ou ANNULE ne peut plus recevoir de tâches
+        if (project.getStatut() == ProjectStatus.TERMINE || project.getStatut() == ProjectStatus.ANNULE) {
+            throw new IllegalArgumentException("Impossible de créer une tâche dans un projet terminé ou annulé");
+        }
+
+        // Règle: Date de fin après date de début
         if (request.getDateDebut().isAfter(request.getDateFin())) {
             throw new IllegalArgumentException("La date de début doit être avant la date de fin");
+        }
+
+        // Règle: Dates de la tâche dans l'intervalle du projet
+        if (request.getDateDebut().isBefore(project.getDateDebut()) ||
+            request.getDateFin().isAfter(project.getDateFin())) {
+            throw new IllegalArgumentException(
+                String.format("Les dates de la tâche doivent être dans l'intervalle du projet (%s - %s)",
+                    project.getDateDebut(), project.getDateFin()));
         }
 
         Task task = Task.builder()
@@ -101,9 +116,33 @@ public class TaskService {
             task.setPriorite(request.getPriorite());
         }
 
+        // Règle: Date de fin après date de début
         if (task.getDateDebut() != null && task.getDateFin() != null &&
                 task.getDateDebut().isAfter(task.getDateFin())) {
             throw new IllegalArgumentException("La date de début doit être avant la date de fin");
+        }
+
+        // Règle: Dates de la tâche dans l'intervalle du projet
+        Project project = task.getProject();
+        if (task.getDateDebut().isBefore(project.getDateDebut()) ||
+            task.getDateFin().isAfter(project.getDateFin())) {
+            throw new IllegalArgumentException(
+                String.format("Les dates de la tâche doivent être dans l'intervalle du projet (%s - %s)",
+                    project.getDateDebut(), project.getDateFin()));
+        }
+
+        // Règle anti-conflit: Si la tâche est assignée et les dates changent, vérifier les conflits
+        if (task.getAssignedTo() != null && (request.getDateDebut() != null || request.getDateFin() != null)) {
+            List<Task> conflicts = taskRepository.findConflictingTasks(
+                    task.getAssignedTo().getId(), task.getDateDebut(), task.getDateFin(), task.getId());
+            if (!conflicts.isEmpty()) {
+                String conflictingTaskTitles = conflicts.stream()
+                        .map(Task::getTitre)
+                        .reduce((a, b) -> a + ", " + b)
+                        .orElse("");
+                throw new IllegalArgumentException(
+                    String.format("Le collaborateur assigné a déjà une tâche sur ce créneau: %s", conflictingTaskTitles));
+            }
         }
 
         task = taskRepository.save(task);
@@ -133,10 +172,21 @@ public class TaskService {
         // Vérifier la disponibilité
         boolean isAvailable = availabilityService.isUserAvailable(
                 userId, task.getDateDebut(), task.getDateFin());
-
         if (!isAvailable) {
             throw new IllegalArgumentException(
                     "L'utilisateur n'est pas disponible pour cette période");
+        }
+
+        // Règle anti-conflit: Vérifier que le collaborateur n'a pas de tâche sur le même créneau
+        List<Task> conflicts = taskRepository.findConflictingTasks(
+                userId, task.getDateDebut(), task.getDateFin(), taskId);
+        if (!conflicts.isEmpty()) {
+            String conflictingTaskTitles = conflicts.stream()
+                    .map(Task::getTitre)
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse("");
+            throw new IllegalArgumentException(
+                String.format("Ce collaborateur a déjà une tâche sur ce créneau: %s", conflictingTaskTitles));
         }
 
         task.setAssignedTo(assignee);
@@ -163,10 +213,21 @@ public class TaskService {
         // Vérifier la disponibilité
         boolean isAvailable = availabilityService.isUserAvailable(
                 newUserId, task.getDateDebut(), task.getDateFin());
-
         if (!isAvailable) {
             throw new IllegalArgumentException(
                     "L'utilisateur n'est pas disponible pour cette période");
+        }
+
+        // Règle anti-conflit: Vérifier que le nouveau collaborateur n'a pas de tâche sur le même créneau
+        List<Task> conflicts = taskRepository.findConflictingTasks(
+                newUserId, task.getDateDebut(), task.getDateFin(), taskId);
+        if (!conflicts.isEmpty()) {
+            String conflictingTaskTitles = conflicts.stream()
+                    .map(Task::getTitre)
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse("");
+            throw new IllegalArgumentException(
+                String.format("Ce collaborateur a déjà une tâche sur ce créneau: %s", conflictingTaskTitles));
         }
 
         task.setAssignedTo(newAssignee);
